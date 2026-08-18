@@ -68,3 +68,39 @@
 ## 下一步
 
 - playwright 端到端验收（本 pipeline 下一子任务）
+
+---
+
+# Relay: session 悬停面板交互验收与收尾
+
+- **Stage**: [job3/3] playwright 交互验收与收尾（真实浏览器驱动）
+- **Status**: ✅ 完成
+- **Branch**: `dev-20260819-session-hover-pin`
+- **Commit**: 提交后回填
+- **Date**: 2026-08-19 (UTC+8)
+
+## 交付内容
+
+- 构建链：`build:lib:client`（ui-primitives/ui-workspace 最新 lib 生效）→ `build:web`（apps/web dist）
+- 新增验收测试 `apps/web/tests/session-hover-pin.e2e.ts`（仓库既有 `launchWebScaffold`
+  真实 chromium 驱动 + seed 会话），覆盖三项交互：
+  - 悬停 session 行 → 悬停卡片出现且含 session id（`Session ID: <id>`）
+  - 点击钉子（`固定`）→ 移开鼠标 → 卡片仍在（aria-pressed=true，按钮变 `取消固定`）
+  - 再点钉子（`取消固定`）→ 移开鼠标 → 卡片收回
+- `apps/web/tsconfig.json`：新 e2e 文件加入 exclude（host-plane，与其它既有 e2e 一致）
+
+## 验证结论
+
+- playwright 三项交互全绿：`vitest run --config vitest.web.config.ts apps/web/tests/session-hover-pin.e2e.ts`
+  → 4 tests 全过（含 zero-model-call 清洁断言）
+- 全量回归全绿：
+  - `pnpm exec tsc -b tsconfig.client.json` → exit 0（完整级联构建后无报错）
+  - `pnpm exec vitest run packages/client/ui-primitives/tests packages/client/ui-workspace/tests`
+    → 29 files / 624 tests 全过
+- 注：本机 3080 端口被宿主 DSH web GUI（运行于 app/deepseek-harness/dev 的独立 checkout）
+  占用，无法在 worktree 上以 3080 再起实例；验收改用仓库标准真实浏览器体系
+  `launchWebScaffold`（真实 chromium + 真实 dist 组合 + seed 冷会话），等价验证真实交互。
+
+## 下一步
+
+- 无（pipeline 全部 3 个 job 已完成）
