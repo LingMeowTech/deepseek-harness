@@ -51,6 +51,11 @@ export function HoverCard({
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [pinned, setPinned] = useState(false)
+
+  const togglePin = useCallback(() => {
+    setPinned(wasPinned => !wasPinned)
+  }, [])
 
   const clearCopied = useCallback(() => {
     if (copyTimerRef.current !== null) {
@@ -173,7 +178,25 @@ export function HoverCard({
         }
         : undefined}
     >
-      {copied ? <span className={css.copied} aria-hidden="true">{copiedLabel}</span> : content}
+      {copied ? <span className={css.copied} aria-hidden="true">{copiedLabel}</span> : (
+        <>
+          {content}
+          <button
+            type="button"
+            className={`${css.pin}${pinned ? ` ${css.pinned}` : ''}`}
+            aria-pressed={pinned}
+            aria-label={pinned ? '取消固定' : '固定'}
+            onClick={(e) => {
+              e.stopPropagation()
+              togglePin()
+            }}
+          >
+            <svg className={css.pinIcon} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z" fill="currentColor" />
+            </svg>
+          </button>
+        </>
+      )}
     </div>
   )
 
@@ -193,8 +216,9 @@ export function HoverCard({
       onPointerLeave={() => {
         clearTimer()
         // Leaving a closed card schedules a no-op close; only arm while
-        // open, matching Menu's shape.
-        if (open) armClose()
+        // open, matching Menu's shape. A pinned card stays put — the pin
+        // is the owner's explicit instruction to keep it until unpinned.
+        if (open && !pinned) armClose()
       }}
       // A press inside the anchor (row click, menu trigger) dismisses the
       // card immediately, without waiting for the owner to flip `disabled`.
