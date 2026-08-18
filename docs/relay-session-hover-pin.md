@@ -76,7 +76,7 @@
 - **Stage**: [job3/3] playwright 交互验收与收尾（真实浏览器驱动）
 - **Status**: ✅ 完成
 - **Branch**: `dev-20260819-session-hover-pin`
-- **Commit**: 提交后回填
+- **Commit**: `9f211a24d9`
 - **Date**: 2026-08-19 (UTC+8)
 
 ## 交付内容
