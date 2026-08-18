@@ -33,3 +33,38 @@
 ## 下一步
 
 - Rows session id（本 pipeline 下一子任务）
+
+---
+
+# Relay: session 悬停面板显示可复制 session id
+
+- **Stage**: [job2/3] session 悬停面板显示可复制 session id（ui-workspace 包，TDD）
+- **Status**: ✅ 完成
+- **Branch**: `dev-20260819-session-hover-pin`
+- **Commit**: `<pending>`
+- **Date**: 2026-08-19 (UTC+8)
+
+## 交付内容
+
+- `SessionHoverContent` 新增 session id 行（`hover.sessionId`，显示 `node.id`）
+- `SessionNodeItem` 的 `HoverCard copyText` 由 `row.title` 改为 `node.id`
+  - blank 行保持无 `copyText`（占位卡片仍只读）
+- `Rows.module.css` 新增 `.hoverId`（caption 灰色，超长省略号截断但完整值参与复制）
+- `locales.ts` zh/en 同步新增 `hover.sessionId`（`会话 ID：{id}` / `Session ID: {id}`）
+- 测试：`tests/rows.client.spec.tsx` 新增 2 用例
+  - 悬停卡片显示 session id，激活复制的是 session id（非标题）
+  - 卡片内点钉子固定 → 移开鼠标面板仍在；再点钉子 → 移开收回
+
+## 验证结论
+
+- TDD 全流程：RED（2 新用例失败）→ GREEN（最小实现转绿）→ REFACTOR（清理）
+- 质量闸门全绿：
+  - `vitest run packages/client/ui-workspace/tests` → 8 files / 123 tests 全过
+  - `tsc -p packages/client/ui-workspace/tsconfig.json --noEmit` → exit 0
+  - `oxlint packages/client/ui-workspace` → exit 0
+- 注：`tsc -b` 全仓报错均为既有 workspace 契约包（api/remotes 等）未级联构建所致，
+  与本次改动无关（同 job1 环境问题）；受影响包 ui-workspace 独立类型检查通过。
+
+## 下一步
+
+- playwright 端到端验收（本 pipeline 下一子任务）
