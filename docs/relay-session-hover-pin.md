@@ -41,7 +41,7 @@
 - **Stage**: [job2/3] session 悬停面板显示可复制 session id（ui-workspace 包，TDD）
 - **Status**: ✅ 完成
 - **Branch**: `dev-20260819-session-hover-pin`
-- **Commit**: `<pending>`
+- **Commit**: `cbf1f704e5`
 - **Date**: 2026-08-19 (UTC+8)
 
 ## 交付内容
