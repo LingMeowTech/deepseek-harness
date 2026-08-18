@@ -277,6 +277,9 @@ function SessionHoverContent({ node, now, t }: { node: SessionNode; now: number;
   return (
     <div className={css.hoverContent}>
       <div className={css.hoverTitle}>{displayTitle(node, t)}</div>
+      {/* The session id is always shown: it is the durable copy payload, even
+          for a provisional blank row. */}
+      <div className={css.hoverId}>{t('hover.sessionId', { id: node.id })}</div>
       {/* Same placeholder rule as the row's trailing cell: no timestamp
           before the first prompt. */}
       {!node.blank && <div className={css.hoverTime}>{hoverTimeLabel(node.updatedAt, now, t)}</div>}
@@ -467,7 +470,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
       anchor={ownRow}
       content={<SessionHoverContent node={node} now={now} t={t} />}
       disabled={menuOpen || drag?.active === true}
-      copyText={row.blank ? undefined : row.title}
+      copyText={row.blank ? undefined : node.id}
       copyLabel={t('copy')}
       copiedLabel={t('hover.copied')}
     />

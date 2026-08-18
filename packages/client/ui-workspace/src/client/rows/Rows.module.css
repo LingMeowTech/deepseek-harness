@@ -313,6 +313,18 @@
   color: #CFD3D6;
 }
 
+/* Session id line: same caption treatment as time, visually truncated when the
+   id runs long but the full value is what gets copied. */
+.hoverId {
+  font-size: 12px;
+  line-height: 16px;
+  color: #CFD3D6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 .hoverStatus {
   display: flex;
   align-items: center;
