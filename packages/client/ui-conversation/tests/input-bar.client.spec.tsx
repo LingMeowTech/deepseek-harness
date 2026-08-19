@@ -52,6 +52,7 @@ interface BenchOptions {
   planEntry?: React.ReactNode
   /** The `plan` projection value the standard-kit useProjection serves. */
   plan?: { active: boolean; pending: boolean }
+  hindsightEntry?: React.ReactNode
   modelEntry?: React.ReactNode
   /** Hot text-ref lexicon (injects a minimal slash stub exposing only lexicon()). */
   lexicon?: ReadonlyMap<'/' | '@', readonly string[]>
@@ -138,6 +139,7 @@ function bench(over?: BenchOptions) {
   const renderSlot = ((key: string, owner: object) => {
     slotCalls.push({ key, owner })
     if (key === 'conversation.input.plan') return over?.planEntry ?? null
+    if (key === 'conversation.input.hindsight') return over?.hindsightEntry ?? null
     if (key === 'conversation.input.model') return over?.modelEntry ?? null
     return null
   }) as InputBarProps['renderSlot']
@@ -1271,10 +1273,11 @@ describe('command launcher chrome and control seats', () => {
     expect(view.queryByLabelText(/^访问模式/)).toBeNull()
     // Every seat dispatched, nothing rendered.
     expect(slotCalls.map(c => c.key)).toEqual([
-      'conversation.input.plan', 'conversation.input.model',
+      'conversation.input.plan', 'conversation.input.hindsight', 'conversation.input.model',
     ])
     expect(view.queryByLabelText('Plan mode')).toBeNull()
     expect(view.queryByLabelText('Model')).toBeNull()
+    expect(view.queryByLabelText('Hindsight')).toBeNull()
   })
 
   it('passes the textarea selection to the command menu launcher and reflects its expanded state', () => {
@@ -1413,9 +1416,11 @@ describe('command launcher chrome and control seats', () => {
     const { view, slotCalls } = bench({
       disabled: true,
       planEntry: <i data-testid="plan-entry" />,
+      hindsightEntry: <i data-testid="hindsight-entry" />,
       modelEntry: <i data-testid="model-entry" />,
     })
     expect(view.getByTestId('plan-entry')).toBeTruthy()
+    expect(view.getByTestId('hindsight-entry')).toBeTruthy()
     expect(view.getByTestId('model-entry')).toBeTruthy()
     // The bar hands its chrome disable state to the filling entry.
     expect(slotCalls.every(c => (c.owner as { locked: boolean }).locked)).toBe(true)

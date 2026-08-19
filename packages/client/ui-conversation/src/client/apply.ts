@@ -280,9 +280,11 @@ export function apply(ctx: Context): void {
     locale: NS,
     // The two named control seats in the bar's tool row (plan beside the
     // access control, model right); empty until their owning plugins
-    // register.
+    // register. `conversation.input.hindsight` is the LMTech Hindsight
+    // memory seat, also beside the access control.
     children: {
       'conversation.input.plan': { kind: 'single', scope: 'session' },
+      'conversation.input.hindsight': { kind: 'single', scope: 'session' },
       'conversation.input.model': { kind: 'single', scope: 'session' },
     },
     inject: (sessionId: SessionId | undefined): ComposerBarInjected => {

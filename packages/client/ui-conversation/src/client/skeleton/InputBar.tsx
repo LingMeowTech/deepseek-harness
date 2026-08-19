@@ -764,6 +764,7 @@ export function InputBar({
             <div className={css.modes}>
               {accessSelect}
               {renderSlot('conversation.input.plan', { locked })}
+              {renderSlot('conversation.input.hindsight', { locked })}
             </div>
             {leftItems}
           </div>
