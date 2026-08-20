@@ -103,6 +103,12 @@ function compareSessionRecency(a: SessionId, b: SessionId, byId: SessionListStat
   return a < b ? -1 : 1
 }
 
+/** Lead an order with the active Session so the session in use stays on top. */
+function withActiveLead(order: readonly SessionId[], current: SessionId | undefined): SessionId[] {
+  if (current === undefined || !order.includes(current)) return [...order]
+  return [current, ...order.filter(id => id !== current)]
+}
+
 /** Reconcile one editable order account and apply its activity-promotion policy. */
 function nextSessionOrderAccount({
   sessionIds, previousOrder, previousUpdatedAt, list, orderBy, sortByRecency,
@@ -130,6 +136,10 @@ function nextSessionOrderAccount({
       order = [...promoted, ...order.filter(id => !promotedIds.has(id))]
     }
   }
+  // The active session always leads the activity order: a freshly created or
+  // selected session stays on top even while other sessions receive later
+  // activity. Manual order is exempt (the user owns that arrangement).
+  if (orderBy === 'updated') order = withActiveLead(order, list.current)
   const updatedAt: Record<string, number> = {}
   for (const id of sessionIds) {
     const session = list.byId[id]
@@ -312,22 +322,27 @@ function SessionTree({
   const orderedWorkspaces = useMemo(() => {
     return workspaces.map((workspace) => {
       const stored = sessionOrderByAccount[workspace.workspaceId as string]
-      const sessionIds = reconciledSessionOrder(workspace.sessionIds, stored)
+      let sessionIds = reconciledSessionOrder(workspace.sessionIds, stored)
+      if (orderBy === 'updated') sessionIds = withActiveLead(sessionIds, list.current)
       return { ...workspace, sessionIds }
     })
-  }, [sessionOrderByAccount, workspaces])
+  }, [sessionOrderByAccount, workspaces, orderBy, list.current])
   const orderedUngroupedSessionIds = useMemo(
-    () => reconciledSessionOrder(ungroupedSessionIds, sessionOrderByAccount[UNGROUPED_KEY]),
-    [sessionOrderByAccount, ungroupedSessionIds],
+    () => {
+      let order = reconciledSessionOrder(ungroupedSessionIds, sessionOrderByAccount[UNGROUPED_KEY])
+      if (orderBy === 'updated') order = withActiveLead(order, list.current)
+      return order
+    },
+    [sessionOrderByAccount, ungroupedSessionIds, orderBy, list.current],
   )
   const groups = useMemo(
     () => deriveGroups(list, orderedWorkspaces, archivedSessionIds, {
       expandedGroups,
       ...(sessionOrderByAccount[UNGROUPED_KEY] === undefined
         ? {}
-        : { ungroupedOrder: sessionOrderByAccount[UNGROUPED_KEY] }),
+        : { ungroupedOrder: orderedUngroupedSessionIds }),
     }),
-    [list, orderedWorkspaces, archivedSessionIds, expandedGroups, sessionOrderByAccount],
+    [list, orderedWorkspaces, archivedSessionIds, expandedGroups, sessionOrderByAccount, orderedUngroupedSessionIds],
   )
   const now = Date.now()
   const commitSessionDrag = (activeDrag: DragState, over: NonNullable<DragState['over']>): void => {
@@ -591,12 +606,14 @@ function FlatList({
   }, [list, orderBy, sessionOrderByAccount, sessionUpdatedAtByAccount, sessionIds, syncSessionOrderAccount])
   const rows = useMemo(() => {
     const byId = new Map(baseRows.map(row => [row.id, row]))
-    return reconciledSessionOrder(sessionIds, sessionOrderByAccount[FLAT_SESSION_ORDER_KEY])
+    let order = reconciledSessionOrder(sessionIds, sessionOrderByAccount[FLAT_SESSION_ORDER_KEY])
+    if (orderBy === 'updated') order = withActiveLead(order, list.current)
+    return order
       .flatMap((id) => {
         const row = byId.get(id)
         return row === undefined ? [] : [row]
       })
-  }, [baseRows, sessionOrderByAccount, sessionIds])
+  }, [baseRows, sessionOrderByAccount, sessionIds, orderBy, list.current])
   const [drag, setDrag] = useState<DragState | null>(null)
   const dropCommitted = useRef(false)
   useNativeDragAcceptance(drag !== null)

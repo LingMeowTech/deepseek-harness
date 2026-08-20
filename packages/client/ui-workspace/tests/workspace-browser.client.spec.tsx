@@ -336,6 +336,44 @@ describe('WorkspaceBrowser', () => {
     expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('two')
   })
 
+  it('keeps the active session on top of the Last updated order', async () => {
+    const initial = sessionState([summary('one', 3), summary('two', 5)], { current: sid('one') })
+    const b = mount({
+      useSessions: hook(initial),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['two', 'one'])])),
+    })
+    fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '最近更新' }))
+    await waitFor(() => {
+      const rows = screen.getAllByRole('treeitem').slice(1)
+      expect(rows[0]?.textContent).toContain('one')
+      expect(rows[1]?.textContent).toContain('two')
+      expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['one', 'two'])
+    })
+
+    // Later activity on another session promotes it below the active one.
+    const promoted = sessionState([summary('one', 3), summary('two', 6)], { current: sid('one') })
+    rerender(b, { useSessions: hook(promoted) })
+    await waitFor(() => {
+      const rows = screen.getAllByRole('treeitem').slice(1)
+      expect(rows[0]?.textContent).toContain('one')
+      expect(rows[1]?.textContent).toContain('two')
+      expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['one', 'two'])
+    })
+
+    // Manual order stays user-owned: the active session is not pinned there.
+    fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '手动排序' }))
+    const [one, two] = screen.getAllByRole('treeitem').slice(1) as [HTMLElement, HTMLElement]
+    two.getBoundingClientRect = () => ({
+      top: 150, bottom: 184, left: 0, right: 200, width: 200, height: 34, x: 0, y: 150, toJSON: () => ({}),
+    })
+    fireEvent.dragStart(one, { dataTransfer: dragData() })
+    fireDrag(two, 'drop', 180)
+    expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['two', 'one'])
+    expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('two')
+  })
+
   it('archives a session from the row menu and hides archived rows in both modes', async () => {
     const archiveSession = vi.fn(async () => {})
     const b = mount({
