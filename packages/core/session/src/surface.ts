@@ -113,6 +113,20 @@ export function deriveEventMessage(event: SessionEvent): Message | null {
   }
 }
 
+/**
+ * 过滤 assistant 消息中的 reasoning 块（对齐 Codex ReasoningContext 默认
+ * current_turn：历史轮思维链不进上下文；当前轮由 deriveMessages 保留）。
+ * 纯 reasoning 消息返回 null。
+ */
+export function stripReasoning(message: Message): Message | null {
+  if (!message.content.some((block) => block.type === 'reasoning')) return message
+  const content = Object.freeze(
+    message.content.filter((block) => block.type !== 'reasoning') as Message['content'],
+  )
+  if (content.length === 0) return null
+  return Object.freeze({ ...message, content }) as Message
+}
+
 /** One replacement operation observed while folding a session surface. */
 export interface SurfaceFoldReplacement {
   /** Seq of the event that replaced the prior surface range. */

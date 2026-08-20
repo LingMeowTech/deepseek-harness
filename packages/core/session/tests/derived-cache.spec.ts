@@ -20,6 +20,28 @@ function scratch(session: Session): unknown {
 }
 
 describe('derived-message cache', () => {
+  it('reasoning 只回传当前轮（对齐 Codex ReasoningContext 默认 current_turn）', () => {
+    const session = Session.create(SessionId('reasoning-current-turn'))
+    const reasoningMessage = (turn: number, step: number, text: string) => ({
+      turn, step,
+      message: createMessage({
+        role: 'assistant' as const,
+        content: [
+          { type: 'reasoning', text: `thought-${turn}` },
+          { type: 'text', text },
+        ],
+        source: { kind: 'model', provider: 'mock', model: 'mock' },
+      }),
+    })
+    session.append('assistant/message', reasoningMessage(1, 1, 'turn-one'), { surfaceOp: 'append' })
+    session.append('assistant/message', reasoningMessage(2, 1, 'turn-two'), { surfaceOp: 'append' })
+    const derived = session.deriveMessages()
+    // 历史轮（turn 1）reasoning 被过滤，保留 text；当前轮（turn 2）reasoning 保留
+    expect(derived[0]!.content.some((b) => b.type === 'reasoning')).toBe(false)
+    expect(derived[0]!.content.some((b) => b.type === 'text' && b.text === 'turn-one')).toBe(true)
+    expect(derived[1]!.content.some((b) => b.type === 'reasoning' && b.text === 'thought-2')).toBe(true)
+  })
+
   it('stays deep-equal to a from-scratch replay derivation as the log grows', () => {
     const session = Session.create(SessionId('cache-grow'))
     session.append('turn/start', { turn: 1 })
