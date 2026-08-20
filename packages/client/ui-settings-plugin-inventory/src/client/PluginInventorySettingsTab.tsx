@@ -93,15 +93,25 @@ export function PluginInventorySettingsTab({
   }, [list, request])
 
   const normalizedQuery = query.trim().toLocaleLowerCase()
-  const filteredEntries = useMemo(
-    () => state.status === 'ready'
-      ? state.snapshot.entries.filter(entry => matches(entry, normalizedQuery))
-      : [],
-    [normalizedQuery, state],
-  )
   const visibleItemKeys = useMemo(
     () => itemKeys.filter(key => matches({ moduleName: key, entryId: key } as PluginInventoryEntry, normalizedQuery)),
     [itemKeys, normalizedQuery],
+  )
+  // 被自定义行认领的 loader 条目不再以只读官方行展示（该行负责绿灯/状态/卸载）。
+  const claimed = useMemo(() => {
+    const set = new Set(itemKeys)
+    return set
+  }, [itemKeys])
+  const claimedEntries = useMemo(
+    () => state.status === 'ready'
+      ? state.snapshot.entries.filter(entry =>
+        !claimed.has(entry.moduleName) && !claimed.has(entry.entryId))
+      : [],
+    [claimed, state],
+  )
+  const filteredEntries = useMemo(
+    () => claimedEntries.filter(entry => matches(entry, normalizedQuery)),
+    [claimedEntries, normalizedQuery],
   )
 
   useEffect(() => {
