@@ -1,10 +1,14 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import type { PluginInventorySnapshot } from '@deepseek-ai/dsh-api-remotes/client'
 import {
   IconChevronDownOutline14,
   IconSearchOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {
+  InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime,
+} from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from './slot-contract.ts'
+import type { PluginInventoryItemsState } from './inventory-items.ts'
 import type { PluginInventoryLocaleKey } from './locales.ts'
 import css from './PluginInventorySettingsTab.module.css'
 
@@ -12,6 +16,13 @@ import css from './PluginInventorySettingsTab.module.css'
 export interface PluginInventorySettingsTabInjected {
   /** Read a current Host inventory snapshot. */
   list: () => Promise<PluginInventorySnapshot>
+  hooks: {
+    /** Extra-row keys bound by the renderer as usePluginInventoryItems. */
+    pluginInventoryItems: {
+      getSnapshot(): PluginInventoryItemsState
+      subscribe(listener: () => void): () => void
+    }
+  }
 }
 
 type PluginInventoryEntry = PluginInventorySnapshot['entries'][number]
@@ -21,6 +32,7 @@ type PluginFiberPhase = PluginInventoryEntry['fiberPhase']
 export type PluginInventorySettingsTabProps =
   PropsRuntime<'settings.plugins.tab'>
   & PropsLocale<'settings.pluginInventory'>
+  & PropsRenderSlots<'settings.plugin.inventory.item'>
   & InjectFace<PluginInventorySettingsTabInjected>
 
 type ViewState =
@@ -61,12 +73,15 @@ function matches(entry: PluginInventoryEntry, normalizedQuery: string): boolean 
 }
 
 /** Render the read-only current Loader inventory. */
-export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsTabProps): ReactNode {
+export function PluginInventorySettingsTab({
+  list, renderSlot, t, usePluginInventoryItems,
+}: PluginInventorySettingsTabProps): ReactNode {
   const catalogId = useId()
   const [request, setRequest] = useState(0)
   const [query, setQuery] = useState('')
   const [expanded, setExpanded] = useState<PluginInventoryEntry['entryId'] | null>(null)
   const [state, setState] = useState<ViewState>({ status: 'loading' })
+  const { loaded: itemsLoaded, keys: itemKeys } = usePluginInventoryItems(snapshot => snapshot)
 
   useEffect(() => {
     let current = true
@@ -83,6 +98,10 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
       ? state.snapshot.entries.filter(entry => matches(entry, normalizedQuery))
       : [],
     [normalizedQuery, state],
+  )
+  const visibleItemKeys = useMemo(
+    () => itemKeys.filter(key => matches({ moduleName: key, entryId: key } as PluginInventoryEntry, normalizedQuery)),
+    [itemKeys, normalizedQuery],
   )
 
   useEffect(() => {
@@ -120,13 +139,19 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
           </label>
           <div className={css.catalogHeading}>
             <h3>{t('catalog')}</h3>
-            <span data-plugin-count={filteredEntries.length}>{filteredEntries.length}</span>
+            <span data-plugin-count={filteredEntries.length + visibleItemKeys.length}>
+              {filteredEntries.length + visibleItemKeys.length}
+            </span>
           </div>
-          {state.snapshot.entries.length === 0 ? <p className={css.status}>{t('empty')}</p> : null}
-          {state.snapshot.entries.length > 0 && filteredEntries.length === 0
+          {state.snapshot.entries.length === 0 && !itemsLoaded
+            ? <p className={css.status}>{t('empty')}</p>
+            : null}
+          {state.snapshot.entries.length > 0
+            && filteredEntries.length === 0
+            && visibleItemKeys.length === 0
             ? <p className={css.status}>{t('emptySearch')}</p>
             : null}
-          {filteredEntries.length > 0 ? (
+          {filteredEntries.length > 0 || visibleItemKeys.length > 0 ? (
             <ul className={css.cards}>
               {filteredEntries.map((entry) => {
                 const status = phaseLabel(entry.fiberPhase, t)
@@ -188,6 +213,11 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
                   </li>
                 )
               })}
+              {visibleItemKeys.map(key => (
+                <Fragment key={key}>
+                  {renderSlot('settings.plugin.inventory.item', {}, { entryKey: key })}
+                </Fragment>
+              ))}
             </ul>
           ) : null}
         </div>
