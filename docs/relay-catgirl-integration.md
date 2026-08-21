@@ -1,33 +1,35 @@
-# Relay — catgirl 集成（m5 集成准备，deepseek-harness）
+# Relay — catgirl integration (m5 integration prep, deepseek-harness)
+
+English | [中文](relay-catgirl-integration.zh.md)
 
 - Pipeline: morollmiao-catgirl-preset（01a0160a-68d1-7f03-b306-38a4d13cf83e）
-- State: `[m5][integration]` 集成测试与验收（01a01618-88ce-725f-91f2-b256b60017ea）
-- Job: `[集成准备]` 建 worktree 合入 4 上游分支 + 接力标记汇总（01a0161c-5292-7032-97bf-a562806ca1db）
-- 集成分支: `dev-20260819-catgirl-integration`（本仓库）
-- 时间: 2026-08-19（UTC+8）
+- State: `[m5][integration]` integration test & acceptance（01a01618-88ce-725f-91f2-b256b60017ea）
+- Job: `[integration prep]` create worktree, merge 4 upstream branches + relay marker summary（01a0161c-5292-7032-97bf-a562806ca1db）
+- Integration branch: `dev-20260819-catgirl-integration`（this repo）
+- Date: 2026-08-19 (UTC+8)
 
-## 集成 worktree
+## Integration worktree
 
-- deepseek-harness 集成 worktree: `C:/Users/miao/Projects/LingMiaoTech/deepseek-harness/wt-dev-20260819-catgirl-integration`
-- dsh-lmtech-plugins 集成 worktree: `C:/Users/miao/Projects/LingMiaoTech/dsh-lmtech-plugins/wt-dev-20260819-catgirl-integration`（分仓库 relay 见 plugins 内 docs/relay-catgirl-integration.md）
-- harness 基线: 本地 dev 99f6f02fec（禁止 origin/main）
+- deepseek-harness integration worktree: `C:/Users/miao/Projects/LingMiaoTech/deepseek-harness/wt-dev-20260819-catgirl-integration`
+- dsh-lmtech-plugins integration worktree: `C:/Users/miao/Projects/LingMiaoTech/dsh-lmtech-plugins/wt-dev-20260819-catgirl-integration`（cross-repo relay: see plugins docs/relay-catgirl-integration.md）
+- harness baseline: local dev 99f6f02fec（origin/main forbidden）
 
-## 上游分支与 commit 清单（本次合入时）
+## Upstream branches & commit list (at merge time)
 
-| 上游分支 | origin commit | 阶段状态 | 说明 |
+| Upstream branch | origin commit | Stage status | Notes |
 |---------|---------------|---------|------|
-| dev-20260819-session-hover-pin | 2c3b4066 | ⚠️ m2 job1-2/3（进行中） | HoverCard pinned 固定态（job1/3，commit 4dea280）+ session 悬停面板显示可复制 session id（job2/3，commit cbf1f704）；playwright 交互验收（job3/3）待上游推进 |
+| dev-20260819-session-hover-pin | 2c3b4066 | ⚠️ m2 job1-2/3（in progress） | HoverCard pinned state (job1/3, commit 4dea280) + session hover panel shows copyable session id (job2/3, commit cbf1f704); playwright interaction acceptance (job3/3) pending upstream |
 
-> ⚠️ **上游完成度说明**：本 job 与上游 m2 并行执行，合入时 hover 分支含 job1-2/3。下游悬停面板验证 job 运行前应重新 `git fetch origin dev-20260819-session-hover-pin && git merge --no-ff FETCH_HEAD` 拾取上游最终态（含 job3/3）。
+> ⚠️ **Upstream completion note**: this job ran in parallel with upstream m2; at merge time the hover branch contained job1-2/3. Before the downstream hover-panel verification job runs, re-fetch the final upstream state with `git fetch origin dev-20260819-session-hover-pin && git merge --no-ff FETCH_HEAD` (including job3/3).
 
-## 本 job 已完成（deepseek-harness 侧）
+## Done in this job (deepseek-harness side)
 
-- [x] harness 集成 worktree 创建（基于本地 dev 99f6f02fec）
-- [x] 合入上游 dev-20260819-session-hover-pin（HoverCard pinned + session 悬停面板）
-- [x] 集成分支 `dev-20260819-catgirl-integration` 已推送 origin
-- 未执行：上游业务代码未修改（仅合入）
+- [x] harness integration worktree created (based on local dev 99f6f02fec)
+- [x] merged upstream dev-20260819-session-hover-pin (HoverCard pinned + session hover panel)
+- [x] integration branch `dev-20260819-catgirl-integration` pushed to origin
+- Not executed: no upstream business-code changes (merge only)
 
-## 下一步（下游验证 job）
+## Next steps (downstream verification job)
 
-1. 重新 fetch+merge hover 最终分支（含 job3/3 playwright 验收）。
-2. 悬停面板 playwright 验证：session id 显示 + 钉子固定/取消交互。
+1. Re-fetch + merge the final hover branch (including job3/3 playwright acceptance).
+2. Playwright verification of the hover panel: session id display + pin/unpin interaction.
