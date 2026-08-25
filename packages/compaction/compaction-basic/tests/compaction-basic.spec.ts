@@ -819,6 +819,25 @@ describe('optional model-free tool-result pruning', () => {
     expect(summarizedText(compact.calls[0]!.input)).not.toContain('result 1 '.repeat(300))
   })
 
+  it('reduces surfaced context volume by at least 50% after compaction (T2a evidence)', async () => {
+    const ctx = createContext(4_000)
+    const compact = new TestCompactionEngine(ctx, {
+      auto: false,
+      thresholdRatio: 0.5,
+      retainTokens: 50,
+    })
+    const session = conversation(10, 'fixture '.repeat(80).trim())
+
+    const before = ctx.tokenMeter.measure(session).totalTokens
+    expect(before).toBeGreaterThanOrEqual(2_000)
+    expect(await compactIfNeeded(compact, session)).not.toBeNull()
+    const after = ctx.tokenMeter.measure(session).totalTokens
+
+    // 压缩后上下文体积较改前 ≥50%（T2a 对齐 codex compact token budget / summary 替换）
+    expect(after).toBeLessThanOrEqual(before * 0.5)
+    expect(compact.calls).toHaveLength(1)
+  })
+
   it('retains the original compaction-basic behavior without the optional plugin', async () => {
     const ctx = createContext(2_000)
     const compact = new TestCompactionEngine(ctx, {
