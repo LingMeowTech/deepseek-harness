@@ -121,6 +121,7 @@ describe('tokenUsage session projection', () => {
       outputTokens: 4,
       cacheReadTokens: 7,
       cacheWriteTokens: 2,
+      cacheHitRatio: 7 / (10 + 7),
     })
     expect(changes).toHaveLength(1)
   })
@@ -145,6 +146,7 @@ describe('tokenUsage session projection', () => {
       outputTokens: 5,
       cacheReadTokens: 8,
       cacheWriteTokens: 1,
+      cacheHitRatio: 8 / (14 + 8),
     })
   })
 
@@ -182,6 +184,7 @@ describe('tokenUsage session projection', () => {
       outputTokens: 15,
       cacheReadTokens: 2,
       cacheWriteTokens: 4,
+      cacheHitRatio: 2 / (30 + 2),
     })
   })
 
@@ -195,6 +198,7 @@ describe('tokenUsage session projection', () => {
       outputTokens: 1,
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
+      cacheHitRatio: 0,
     })
   })
 
@@ -221,6 +225,7 @@ describe('tokenUsage session projection', () => {
       outputTokens: 3,
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
+      cacheHitRatio: 0,
     })
   })
 
@@ -241,6 +246,7 @@ describe('tokenUsage session projection', () => {
       outputTokens: 2,
       cacheReadTokens: 5,
       cacheWriteTokens: 0,
+      cacheHitRatio: 5 / (8 + 5),
     })
   })
 })

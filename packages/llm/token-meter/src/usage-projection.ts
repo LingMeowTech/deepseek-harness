@@ -48,6 +48,24 @@ const projectionSchema = z.object({
 }).strict()
 
 /**
+ * Exposed projection view: the four durable buckets plus the derived
+ * prompt-side cache-hit ratio. The ratio is a pure function of the buckets, so
+ * it is computed at the view boundary and never persisted (keeps the state
+ * schema and version stable).
+ */
+const tokenUsageViewSchema = projectionSchema.extend({
+  cacheHitRatio: z.number().min(0).max(1).optional(),
+})
+
+/** Prompt-side cache-hit ratio, or no field before any input reported usage. */
+function withCacheHitRatio(totals: TokenUsageProjection): TokenUsageProjection {
+  const denom = totals.uncachedInputTokens + totals.cacheReadTokens
+  return denom > 0
+    ? { ...totals, cacheHitRatio: totals.cacheReadTokens / denom }
+    : totals
+}
+
+/**
  * The token-usage unit's state schema — the one definition of the state
  * shape; the state type is inferred from it.
  */
@@ -147,7 +165,7 @@ export const tokenUsageProjectionDefinition = {
       last: { turn, step, buckets },
     }
   },
-  wire: { viewSchema: projectionSchema, view: state => state.totals },
+  wire: { viewSchema: tokenUsageViewSchema, view: state => withCacheHitRatio(state.totals) },
 } satisfies ProjectionDefinition<'tokenUsage', TokenUsageState>
 
 /**
