@@ -32,6 +32,10 @@
 
 **agent-busy 放行**: `packages/api/remotes/src/agent-lookup.ts` 的 `hasApiRemoteSubagentOwner` fence 对决策应答路径放行；普通 `session.prompt` 的 agent-busy 行为保持不变（回归红线）。
 
+## Issue 上报
+
+- **跳过并记录原因**: 目标仓库 `deepseek-harness` 托管于 GitHub（remote: github.com/LingMeowTech/deepseek-harness.git），节点 payload 未提供 issue_link；Gitea 查询 `LingMiaoTech/deepseek-harness` 返回 404 无此仓库，按 repo+pipeline 名亦无匹配 issue → 按规则确无匹配即跳过 gitea comment，本记录为跳过原因留痕。
+
 ## 下一步
 
 **TDD-RED**：按 `tasks.md` Phase 1 写失败测试（packages/subagent/subagent/tests/、packages/host/apiproxy/tests/、packages/api/remotes/tests/），覆盖主链路：子代理发问→父代理代答→按选项续跑；跑测试确认 RED 并记录失败输出到本文件。
