@@ -37,4 +37,9 @@
 ## 下一步（B6.2 GREEN）
 
 - ✅ 已完成，见上方 GREEN 完成记录
+
+## State 收尾（B6.3 后追加）
+
+- State [B6] 收尾总结节点输出：`node_output/01a052de-e2d1-7037-a1de-05d397c658de.json`（state_summary）
+- **Issue 评论跳过原因**：该 pipeline（repo=dsh-harness）远端为 GitHub `github.com/LingMeowTech/deepseek-harness`，Gitea 无此仓库（API 404），无法按 repo+pipeline 名匹配 Gitea issue，故未追加 State Summary 评论（按「确无匹配才跳过并记录」规则处理）
 - 待 push：`git push origin dev-20260830-b6-reasoning-fix`
