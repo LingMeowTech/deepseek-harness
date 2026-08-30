@@ -1,19 +1,61 @@
 # Relay: B13 子代理决策答复通道
 
-## 状态: spec 完成 ✅
+## 状态: RED 完成 ✅
 
-**更新时间**: 2026-08-31 06:50 UTC+8
+**更新时间**: 2026-08-31 07:40 UTC+8
 
 ## 分支信息
 
 - **分支名**: `dev-20260831-b13-subagent-decision-answer`
-- **worktree**: `C:/Users/miao/AppData/Local/Programs/LingMeowTech/LingmeowObservatory/app/deepseek-harness/dev`
+- **worktree**: `C:/Users/miao/Projects/LingMiaoTech/deepseek-harness/worktree/dev`（junction 别名 `C:/Users/miao/AppData/Local/Programs/LingMeowTech/LingmeowObservatory/app/deepseek-harness/dev`）
 
 ## 已产出（spec-kit 产物目录 $SPEC_DIR）
 
 - `specs/20260831-064900-subagent-decision-answer/spec.md` — 需求目标/范围/验收标准（RED-GREEN-REFACTOR）+ input_spec
 - `specs/20260831-064900-subagent-decision-answer/plan.md` — 技术方案与 TDD 实施步骤
 - `specs/20260831-064900-subagent-decision-answer/tasks.md` — bite-sized 任务清单（RED→GREEN→REFACTOR）
+
+## 本轮产出（TDD-RED，Phase 1，T001-T003）
+
+**新增测试文件**（仅测试，未触碰实现源码）：
+- `packages/subagent/subagent/tests/decision-answer.spec.ts`（T001）
+- `packages/host/apiproxy/tests/decision-answer-contract.spec.ts`（T002/T004）
+- `packages/api/remotes/tests/agent-lookup-decision-answer.spec.ts`（T003）
+
+### RED 证据（2026-08-31 07:38 UTC+8 实测输出片段）
+
+**@deepseek-ai/dsh-api-remotes**（`pnpm exec vitest run packages/api/remotes/tests/agent-lookup-decision-answer.spec.ts`）：
+```
+Tests  1 failed | 2 passed (3)
+FAIL > resolves a subagent-owned session through the decision-answer path (no agent-busy)
+AssertionError: expected 'undefined' to be 'function'
+  expect(typeof resolveDecisionAnswerAgent).toBe('function')
+  -> resolveDecisionAnswerAgent 未导出 = 决策应答路径未实现（通道缺失）
+（另 2 条通过 = 普通 session.prompt / 后代会话 agent-busy 回归红线保持）
+```
+
+**@deepseek-ai/dsh-host-apiproxy**（`pnpm exec vitest run packages/host/apiproxy/tests/decision-answer-contract.spec.ts`）：
+```
+Tests  5 failed (5)
+[1] subagents.answer 转发 zod 合法 answers → TypeError: api.subagents.answer is not a function（方案 b RPC 缺失）
+[2] subagents.questions 列出挂起问题 → api.subagents.questions is not a function
+[3] subagents.prompt 转发 answers → followup 收到对象不含 answers（当前 prompt 实现丢弃 answers，方案 a 未实现）
+[4] 非法 answers（缺 id）→ api.subagents.answer is not a function（zod 严格校验未挂接）
+[5] 未知 rpcId → api.subagents.answer is not a function（not-found 语义未实现）
+```
+
+**@deepseek-ai/dsh-subagent**（`pnpm exec vitest run packages/subagent/subagent/tests/decision-answer.spec.ts`）：
+```
+Tests  2 failed (2)
+[1] answers a paused child ask through followup answers...
+    AssertionError: expected 1 to be greater than or equal to 2
+    -> 子代理 ask_user_question 无法挂起（owned child 直发被拒），followup answers 未生效，子会话未续跑（通道缺失）
+[2] rejects a decision answer for an unknown rpcId...
+    AssertionError: promise resolved "b98d54df-..." instead of rejecting
+    -> answers 参数被忽略，未触发 NOT_PENDING 结构化错误（通道缺失）
+```
+
+**结论**: 新增 8 条失败断言（remotes 1 + apiproxy 5 + subagent 2），失败原因全部=通道缺失/未实现，无测试自身编译/import 错误；remotes 2 条 agent-busy 回归红线通过 → 符合 SC-001。
 
 ## API 契约草案
 
@@ -30,7 +72,7 @@
 
 **与宿主 questions 域对齐**: 复用 `packages/host/apiproxy` `/api/respond` pending table 路由或等价 RPC 形状；`QuestionResponsePayload` 契约见 `src/api/questions.ts`；校验见 `questions.schema.ts`；回归参考 `tests/api-proxy-question.spec.ts`。
 
-**agent-busy 放行**: `packages/api/remotes/src/agent-lookup.ts` 的 `hasApiRemoteSubagentOwner` fence 对决策应答路径放行；普通 `session.prompt` 的 agent-busy 行为保持不变（回归红线）。
+**agent-busy 放行**: `packages/api/remotes/src/agent-lookup.ts` 的 `hasApiRemoteSubagentOwner` fence 对决策应答路径放行；普通 `session.prompt` 的 agent-busy 行为保持不变（回归红线，RED 阶段已断言通过）。
 
 ## Issue 上报
 
@@ -38,4 +80,8 @@
 
 ## 下一步
 
-**TDD-RED**：按 `tasks.md` Phase 1 写失败测试（packages/subagent/subagent/tests/、packages/host/apiproxy/tests/、packages/api/remotes/tests/），覆盖主链路：子代理发问→父代理代答→按选项续跑；跑测试确认 RED 并记录失败输出到本文件。
+**TDD-GREEN**：按 `tasks.md` Phase 2 最小实现转绿——
+- T005 实现决策答复通道（方案 a：subagent.prompt/followup 支持 answers；方案 b：subagent.answer/questions RPC，按 plan.md 选定，方案 a 优先）
+- T006 `packages/api/remotes/src/agent-lookup.ts` 导出 `resolveDecisionAnswerAgent` 放行决策应答路径，普通 session.prompt fence 不变
+- T007 与宿主 questions 域对齐（zod 严格校验、rpcId 回显、pending table 语义）
+- T008 非法 answers 返回结构化错误
