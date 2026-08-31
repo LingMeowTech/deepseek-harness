@@ -40,6 +40,10 @@ const titleUnit = (): ProjectionDefinition<'test/list-title', string> => ({
   stateSchema: z.string(),
   init: () => '',
   apply: state => state,
+  wire: {
+    viewSchema: z.object({ title: z.string() }).nullable(),
+    view: state => (state ? { title: state } : null),
+  },
   stateVersion: 1,
 })
 
@@ -59,7 +63,7 @@ async function harness(count: number): Promise<{ api: ReturnType<typeof createAp
       inbox: { inserted: () => {}, discarded: () => {}, claimed: () => {} },
       status: 'idle',
       ctx,
-    } as Agent)
+    } as unknown as Agent)
   }
   // Spy the registry's snapshot fold: the lightweight mode must never reach it.
   const snapshot = vi.spyOn(ctx.sessionProjections, 'snapshot')
