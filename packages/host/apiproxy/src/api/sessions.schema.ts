@@ -61,9 +61,10 @@ export const sessionSummarySchema = z.object({
   projections: z.lazy(() => sessionProjectionsBlockSchema).optional(),
 }) as unknown as z.ZodType<Wire<SessionSummary>>
 
-/** session.list request payload (cursor is a reserved seat, unimplemented in v1). */
+/** session.list request payload (cursor is a reserved seat, unimplemented in v1; `projection: 'none'` serves metadata-only rows). */
 export const sessionListRequestSchema = z.object({
   cursor: z.string().optional(),
+  projection: z.literal('none').optional(),
 }) satisfies z.ZodType<Wire<RequestPayload<'session.list'>>>
 
 /** session.list response value. */
