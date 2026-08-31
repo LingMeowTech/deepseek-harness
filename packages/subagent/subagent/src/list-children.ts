@@ -33,7 +33,7 @@ const COLD_READ_CONCURRENCY = 4
 
 /**
  * One entry of a {@link listChildren} result, ordered by header `createdAt`
- * with ties broken on id. Only a candidate whose durable header has
+ * newest first with ties broken on id (descending). Only a candidate whose durable header has
  * `origin: 'subagent'` is interpreted. A served `subagent` projection value
  * produces a `child`; a settled candidate whose fold served no identity
  * produces a `diagnostic`; a running candidate without one is omitted — its
@@ -127,7 +127,8 @@ interface PositionedCandidate {
  *   optional persistence, and the optional projection cache.
  * @param parentSessionId - parent session whose direct children are listed.
  * @param signal - caller-owned cancellation observed around every persistence read.
- * @returns children and per-child diagnostics ordered by `createdAt`, then id.
+ * @returns children and per-child diagnostics ordered by `createdAt`
+ * descending (newest first), then id descending.
  * @throws {@link SubagentError} when the projection registry or the session
  *   store is not mounted, or the caller cancels the listing.
  */
@@ -330,9 +331,9 @@ function descendantCandidates(
   return positioned
 }
 
-/** Compare siblings by durable creation time, then id. */
+/** Compare siblings by durable creation time (newest first), then id. */
 function compareCorpusRecords(a: CorpusRecord, b: CorpusRecord): number {
-  return a.header.createdAt - b.header.createdAt || a.header.id.localeCompare(b.header.id)
+  return b.header.createdAt - a.header.createdAt || b.header.id.localeCompare(a.header.id)
 }
 
 /**

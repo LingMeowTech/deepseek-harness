@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/relay-catgirl-integration.md
+relay-catgirl-integration.md: 5e88a082ea42197c2d241fbcf8ed0512980c33e9
+relay-catgirl-integration.zh.md: aba5f4190d756071ea32ceaa5c7ffbd5713abf70

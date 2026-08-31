@@ -4,6 +4,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { PluginInventorySettingsTab, type PluginInventorySettingsTabInjected } from './PluginInventorySettingsTab.tsx'
+import { PluginInventoryItemsController } from './inventory-items.ts'
 import { en, zh, type PluginInventoryLocaleKey } from './locales.ts'
 
 export type { PluginInventorySettingsTabInjected, PluginInventorySettingsTabProps } from './PluginInventorySettingsTab.tsx'
@@ -34,7 +35,18 @@ export function apply(ctx: ClientContext): void {
     }
     return result.value
   }
-  const injected = (): PluginInventorySettingsTabInjected => ({ list })
+  const items = new PluginInventoryItemsController(
+    () => ctx.slots.entries('settings.plugin.inventory.item'),
+  )
+  // A row registered after the first read joins the list without a wire call.
+  ctx.effect(
+    () => ctx.slots.subscribe('settings.plugin.inventory.item', () => items.refresh()),
+    'ui-settings-plugin-inventory: item ledger',
+  )
+  const injected = (): PluginInventorySettingsTabInjected => ({
+    list,
+    hooks: { pluginInventoryItems: items.inject().hooks.pluginInventoryItems },
+  })
 
   ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
     name: 'settings.plugins.tab',
@@ -43,5 +55,6 @@ export function apply(ctx: ClientContext): void {
     label: () => t('tab'),
     locale: NS,
     inject: injected,
+    children: { 'settings.plugin.inventory.item': { kind: 'keyed', scope: 'root' } },
   }, PluginInventorySettingsTab))
 }

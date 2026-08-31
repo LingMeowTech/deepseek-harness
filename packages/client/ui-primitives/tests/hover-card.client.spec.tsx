@@ -236,7 +236,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      const card = screen.getByRole('button')
+      const card = screen.getByRole('button', { name: '复制: value' })
       fireEvent.keyDown(card, { key: 'Escape' })
       expect(writeText).not.toHaveBeenCalled()
       await act(async () => { fireEvent.keyDown(card, { key: 'Enter' }) })
@@ -256,7 +256,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      await act(async () => { fireEvent.click(screen.getByRole('button')) })
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: '复制: value' })) })
       expect(screen.queryByText('Copied')).toBeNull()
       expect(screen.getByText('card body')).toBeTruthy()
     } finally {
@@ -271,7 +271,7 @@ describe('HoverCard', () => {
       const { view, wrapper } = mount({ copyText: 'value' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      await act(async () => { fireEvent.click(screen.getByRole('button')) })
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: '复制: value' })) })
       expect(vi.getTimerCount()).toBe(1)
       view.unmount()
       expect(vi.getTimerCount()).toBe(0)
@@ -287,7 +287,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      await act(async () => { fireEvent.click(screen.getByRole('button')) })
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: '复制: value' })) })
       expect(screen.getByRole('status').textContent).toBe('Copied')
       fireEvent.pointerLeave(wrapper)
       act(() => { vi.advanceTimersByTime(POINTER_GRACE_MS) })
@@ -308,7 +308,7 @@ describe('HoverCard', () => {
       const { view, wrapper } = mount({ copyText: 'value' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      fireEvent.click(screen.getByRole('button'))
+      fireEvent.click(screen.getByRole('button', { name: '复制: value' }))
       expect(writeText).toHaveBeenCalledOnce()
       view.unmount()
       await act(async () => { acceptWrite?.() })
@@ -326,7 +326,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      fireEvent.click(screen.getByRole('button'))
+      fireEvent.click(screen.getByRole('button', { name: '复制: value' }))
       fireEvent.pointerLeave(wrapper)
       act(() => { vi.advanceTimersByTime(POINTER_GRACE_MS) })
       fireEvent.pointerEnter(wrapper)
@@ -347,7 +347,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      const card = screen.getByRole('button')
+      const card = screen.getByRole('button', { name: '复制: value' })
       fireEvent.click(card)
       fireEvent.click(card)
       expect(writeText).toHaveBeenCalledOnce()
@@ -425,5 +425,49 @@ describe('HoverCard', () => {
     view.unmount()
     act(() => { vi.advanceTimersByTime(1000) })
     expect(screen.queryByText('card body')).toBeNull()
+  })
+
+  describe('pinned', () => {
+    const pinName = (pinned: boolean) => (pinned ? '取消固定' : '固定')
+
+    /** Open the card (default dwell) and return the wrapper for pointer events. */
+    function openCard(): HTMLElement {
+      const { wrapper } = mount()
+      fireEvent.pointerEnter(wrapper)
+      act(() => { vi.advanceTimersByTime(500) })
+      expect(screen.getByText('card body')).toBeTruthy()
+      return wrapper
+    }
+
+    it('pinning keeps the card open after the pointer leaves', () => {
+      const wrapper = openCard()
+      fireEvent.click(screen.getByRole('button', { name: pinName(false) }))
+      const pin = screen.getByRole('button', { name: pinName(true) })
+      expect(pin.getAttribute('aria-pressed')).toBe('true')
+      fireEvent.pointerLeave(wrapper)
+      act(() => { vi.advanceTimersByTime(POINTER_GRACE_MS + 1000) })
+      expect(screen.getByText('card body')).toBeTruthy()
+    })
+
+    it('unpinning restores the hover dismissal', () => {
+      const wrapper = openCard()
+      fireEvent.click(screen.getByRole('button', { name: pinName(false) }))
+      expect(screen.getByRole('button', { name: pinName(true) })).toBeTruthy()
+      fireEvent.click(screen.getByRole('button', { name: pinName(true) }))
+      expect(screen.getByRole('button', { name: pinName(false) })).toBeTruthy()
+      fireEvent.pointerLeave(wrapper)
+      act(() => { vi.advanceTimersByTime(POINTER_GRACE_MS) })
+      expect(screen.queryByText('card body')).toBeNull()
+    })
+
+    it('does not arm a close timer while pinned', () => {
+      const wrapper = openCard()
+      fireEvent.click(screen.getByRole('button', { name: pinName(false) }))
+      const before = vi.getTimerCount()
+      fireEvent.pointerLeave(wrapper)
+      expect(vi.getTimerCount()).toBe(before)
+      act(() => { vi.advanceTimersByTime(POINTER_GRACE_MS * 5) })
+      expect(screen.getByText('card body')).toBeTruthy()
+    })
   })
 })

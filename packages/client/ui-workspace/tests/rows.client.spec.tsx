@@ -568,4 +568,58 @@ describe('workspace browser rows', () => {
     )
     expect(screen.getByRole('treeitem').className).toMatch(/dropAfter/)
   })
+
+  it('session hover card shows the session id and copies it on activation', async () => {
+    vi.useFakeTimers()
+    const writeText = vi.fn(async () => {})
+    const restoreClipboard = installClipboard(writeText)
+    try {
+      const node: SessionNode = {
+        id: sid('s1'), title: 'Session', blank: false, running: false,
+        runningSubagentCount: 0, completed: false, updatedAt: 0,
+      }
+      render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+        onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+      const wrapper = screen.getByRole('treeitem').parentElement as HTMLElement
+      fireEvent.pointerEnter(wrapper)
+      act(() => { vi.advanceTimersByTime(500) })
+      // The card body includes the session id line.
+      expect(screen.getByText('会话 ID：s1')).toBeTruthy()
+      // Activation (card click) copies the session id, not the row title.
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: /复制.*s1/ })) })
+      expect(writeText).toHaveBeenCalledWith('s1')
+    } finally {
+      restoreClipboard()
+      vi.useRealTimers()
+    }
+  })
+
+  it('session hover card pin keeps it open and unpinning restores hover dismissal', () => {
+    vi.useFakeTimers()
+    try {
+      const node: SessionNode = {
+        id: sid('s1'), title: 'Session', blank: false, running: false,
+        runningSubagentCount: 0, completed: false, updatedAt: 0,
+      }
+      render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+        onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+      const wrapper = screen.getByRole('treeitem').parentElement as HTMLElement
+      fireEvent.pointerEnter(wrapper)
+      act(() => { vi.advanceTimersByTime(500) })
+      expect(screen.getByText('会话 ID：s1')).toBeTruthy()
+      // Pin the card; the pointer can leave and the card stays.
+      fireEvent.click(screen.getByRole('button', { name: '固定' }))
+      expect(screen.getByRole('button', { name: '取消固定' })).toBeTruthy()
+      fireEvent.pointerLeave(wrapper)
+      act(() => { vi.advanceTimersByTime(200 + 1000) })
+      expect(screen.getByText('会话 ID：s1')).toBeTruthy()
+      // Unpin restores the hover dismissal.
+      fireEvent.click(screen.getByRole('button', { name: '取消固定' }))
+      fireEvent.pointerLeave(wrapper)
+      act(() => { vi.advanceTimersByTime(200) })
+      expect(screen.queryByText('会话 ID：s1')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
