@@ -94,3 +94,18 @@
   原因沿用上方记录
 - **结论**: 本 pipeline 收尾节点完成（第四次执行），汇总内容/验证结论/遗留风险与三次复核一致，
   output.json 如实标记（含阻塞状态），不留遗留动作
+
+
+---
+
+## 第 6 次执行记录（pipeline 收尾节点续跑，2026-08-31 11:47 UTC+8）
+
+- **节点**: 01a05508-3dd3-760c-aa1a-07ad0aa0acee（[总结][pipeline 收尾]）
+- **触发方式**: goal 预算续跑（goal-round 自动续轮，DSH worker）
+- **复核结论**: 与第 4 次一致——Spec/验证/交付 job 完成且如实上报 blocked；实现 1/2/3 零产物（服务器 st4 与实际不符，无修复合入）
+- **增量动作**:
+  - ls-remote 复核 dev-20260831-b17-verify @ 85427f7f5b 已推 origin ✓
+  - node_output/01a05508-3dd3-760c-aa1a-07ad0aa0acee.json 更新：commit 59f9d975bf → 85427f7f5b，时间线补至本节点第 6 次续跑
+  - .lmo/output.json 同步更新 commit 与复核轮次
+  - 本记录追加；pipeline_report_node 上报 st4
+- **Issue 评论**: 维持跳过（Gitea 无匹配 issue、目标仓库在 GitHub 无凭据，原因见上）
