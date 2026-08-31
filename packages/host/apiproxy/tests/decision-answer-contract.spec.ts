@@ -32,7 +32,7 @@ function request<P>(payload: P): RpcRequest<P> {
   return { rpcId: RpcId('subagent-rpc'), payload }
 }
 
-function bench(options: { followupAnswers?: unknown } = {}) {
+function bench(options: { pendingChild?: boolean } = {}) {
   const parent = { id: PARENT }
   const child = { id: CHILD, status: 'idle' }
   const getAgent = vi.fn((id: SessionId) => (id === PARENT ? parent : id === CHILD ? child : undefined))
@@ -42,8 +42,11 @@ function bench(options: { followupAnswers?: unknown } = {}) {
     _content: unknown,
     delivery: { source: { kind: string; rpcId: RpcId }; signal: AbortSignal; answers?: unknown },
   ) => {
-    if (options.followupAnswers !== undefined) {
-      return Promise.resolve('message-1')
+    // Model the real decision-answer table: an answers delivery only settles
+    // when the child actually has a parked ask; otherwise the channel surfaces
+    // a structured NOT_PENDING error (mapped to not-found by the RPC layer).
+    if (delivery.answers !== undefined && !options.pendingChild) {
+      return Promise.reject({ code: 'NOT_PENDING', message: 'no pending ask' })
     }
     void delivery
     return Promise.resolve('message-1')
@@ -87,7 +90,7 @@ function interrupt() {}
 
 describe('B13 decision-answer channel contract (T002/T004)', () => {
   it('scheme b: subagents.answer forwards a zod-valid answers batch into the delivery channel', async () => {
-    const { api, followup } = bench()
+    const { api, followup } = bench({ pendingChild: true })
     const address = { parentSessionId: PARENT, childSessionId: CHILD, mode: 'continuable' as const }
     const response = await (api.subagents as unknown as {
       answer(request: RpcRequest<typeof address & { answers: unknown }>): Promise<unknown>
@@ -120,7 +123,7 @@ describe('B13 decision-answer channel contract (T002/T004)', () => {
   })
 
   it('scheme a: subagents.prompt forwards an optional answers batch into the delivery channel', async () => {
-    const { api, followup } = bench()
+    const { api, followup } = bench({ pendingChild: true })
     const response = await api.subagents.prompt(request({
       parentSessionId: PARENT,
       childSessionId: CHILD,

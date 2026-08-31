@@ -166,9 +166,9 @@ describe('B13 decision-answer channel (T001, scheme a)', () => {
 
     // Parent answers the paused ask through the delivery channel (scheme a:
     // one ask answered as a whole batch, rpcId echoed in the answer id).
-    const answered = await answerFollowup(ctx, parent, started.childId, {
-      answers: [{ id: 'target', selected: ['Code'] }],
-    })
+    const answered = await answerFollowup(ctx, parent, started.childId, [
+      { id: 'target', selected: ['Code'] },
+    ])
     expect(answered).toBeTypeOf('string')
 
     // The child resumes with the chosen option and settles; the run reports

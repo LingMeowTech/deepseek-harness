@@ -95,7 +95,7 @@ import type { ApprovalOutcome, ApprovalRequestId } from '@deepseek-ai/dsh-user-a
 import type {} from '@deepseek-ai/dsh-user-approval'
 import { approvalResponsePayloadSchema } from './api/approvals.schema.ts'
 import { imageLimitsProjectionSchema, sessionListMetadataProjectionSchema } from './api/sessions.schema.ts'
-import { questionResponsePayloadSchema } from './api/questions.schema.ts'
+import { askUserQuestionAnswerItemSchema, questionResponsePayloadSchema } from './api/questions.schema.ts'
 import type { ClientResponse, RpcError, RpcReceipt, RpcRequest, RpcResponse } from './api/rpc.ts'
 import { RpcId } from './api/rpc.ts'
 import type {
@@ -2664,7 +2664,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       },
 
       async prompt(request, signal) {
-        const { parentSessionId, childSessionId, content, clientTimeZone } = request.payload
+        const { parentSessionId, childSessionId, content, clientTimeZone, answers } = request.payload
         const canonicalTimeZone = clientTimeZone === undefined
           ? undefined
           : canonicalClientTimeZone(clientTimeZone)
@@ -2695,11 +2695,95 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
               ...(canonicalTimeZone === undefined ? {} : { clientTimeZone: canonicalTimeZone }),
             },
             signal,
+            ...(answers === undefined ? {} : { answers }),
           })
           return ok(request, { messageId })
         } catch (error: unknown) {
           return subagentPromptError(request, error, signal)
         }
+      },
+
+      async answer(request, signal) {
+        const { parentSessionId, childSessionId, answers } = request.payload
+        const parent = ctx.agents.get(parentSessionId)
+        if (parent === undefined) {
+          return err(request, {
+            code: 'subagent-parent-unavailable',
+            message: `parent session "${parentSessionId}" is not live`,
+            details: { parentSessionId },
+          })
+        }
+        const verified = await catalogChild(ctx, {
+          parentSessionId, childSessionId, mode: 'continuable',
+        }, signal)
+        if (verified.error !== undefined) return err(request, verified.error)
+        // zod-strict AskUserQuestionAnswer alignment: every answer item must
+        // carry `id` + `selected` (custom optional); a malformed
+        // batch is a structured client error, never silently accepted.
+        const parsed = askUserQuestionAnswerItemSchema.array().safeParse(answers)
+        if (!parsed.success) {
+          return err(request, {
+            code: 'bad-request',
+            message: 'answers must be AskUserQuestionAnswer items (id + selected, custom optional)',
+            details: { issues: [] },
+          })
+        }
+        // exactOptionalPropertyTypes: strip an explicit undefined `custom` so
+        // the parsed batch satisfies DecisionAnswerItem.
+        const decisionAnswers = parsed.data.map(item => ({
+          id: item.id,
+          selected: item.selected,
+          ...item.custom === undefined ? {} : { custom: item.custom },
+        }))
+        try {
+          // Decision-answer delivery reuses the followup channel: the answers
+          // settle the child's parked ask instead of enqueuing content.
+          await ctx.subagents.followup(parent, childSessionId, [], {
+            source: { kind: 'user', rpcId: request.rpcId },
+            signal: signal ?? new AbortController().signal,
+            answers: decisionAnswers,
+          })
+          return ok(request, { accepted: true })
+        } catch (error: unknown) {
+          if ((error as { code?: string } | undefined)?.code === 'NOT_PENDING') {
+            return err(request, {
+              code: 'not-found',
+              message: 'subagent has no pending ask matching the answers',
+              details: { childSessionId },
+            })
+          }
+          return subagentPromptError(request, error, signal ?? new AbortController().signal)
+        }
+      },
+
+      questions(request) {
+        const { childSessionId } = request.payload
+        // Opportunistic read: compositions without the decision-answer table
+        // expose no parked asks (an empty catalog).
+        const pendingQuestions = (ctx.subagents as unknown as {
+          pendingQuestions?: (id: SessionId) => readonly {
+            id: string
+            question: string
+            header?: string
+            options?: ReadonlyArray<{ readonly label: string; readonly description?: string }>
+            multiSelect?: boolean
+          }[]
+        }).pendingQuestions
+        const questions = pendingQuestions === undefined ? [] : pendingQuestions(childSessionId)
+        return Promise.resolve(ok(request, {
+          questions: questions.map(question => ({
+            id: question.id,
+            question: question.question,
+            ...(question.header === undefined ? {} : { header: question.header }),
+            ...(question.options === undefined
+              ? {}
+              : { options: question.options.map(option => ({
+                label: option.label,
+                ...(option.description === undefined ? {} : { description: option.description }),
+              })) }),
+            ...(question.multiSelect === undefined ? {} : { multiSelect: question.multiSelect }),
+          })),
+        }))
       },
 
       // Deliberately no catalog, history, persistence, or parent Agent lookup:
