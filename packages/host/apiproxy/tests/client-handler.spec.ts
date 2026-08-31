@@ -68,6 +68,8 @@ function scriptedApi(overrides: {
       history: r => ok(r, { events: [], hasMore: false }),
       prompt: r => ok(r, { messageId: 'message-1' as never }),
       interrupt: r => ok(r, { accepted: true as const }),
+      answer: r => ok(r, { accepted: true as const }),
+      questions: r => ok(r, { questions: [] }),
       ...overrides.subagents,
     },
     host: {
