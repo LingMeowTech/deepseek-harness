@@ -1,8 +1,8 @@
 # Relay: B13 子代理决策答复通道
 
-## 状态: RED 完成 ✅
+## 状态: REFACTOR 完成 ✅
 
-**更新时间**: 2026-08-31 07:40 UTC+8
+**更新时间**: 2026-08-31 08:10 UTC+8
 
 ## 分支信息
 
@@ -85,3 +85,18 @@ Tests  2 failed (2)
 - T006 `packages/api/remotes/src/agent-lookup.ts` 导出 `resolveDecisionAnswerAgent` 放行决策应答路径，普通 session.prompt fence 不变
 - T007 与宿主 questions 域对齐（zod 严格校验、rpcId 回显、pending table 语义）
 - T008 非法 answers 返回结构化错误
+
+## REFACTOR 完成（2026-08-31 08:10 UTC+8）
+
+**GREEN 提交**（`54117312eb`、`b425a19671`、`5f7ed0eea0`）：RED 用例全部转绿——remotes 3/3、apiproxy 5/5、subagent 2/2。
+
+**REFACTOR 产出**：
+- 修复 `decision-answer.ts:111` `internal/get` 回调未用参数（`_subject`/`_error`），tsc 三包全绿（`packages/subagent/subagent`、`packages/host/apiproxy`、`packages/api/remotes`）。
+- 修正 subagent 测试 `answerFollowup` 传参形状（裸数组 `[{ id, selected }]`，与 apiproxy 契约一致）。
+- **质量闸门**：
+  - tsc：三包 exit 0 ✅
+  - vitest：apiproxy 383/383 ✅、remotes 9/9 ✅、subagent 542 passed（1 failed = `subagent-acp.spec.ts > cwd resolution > resolves a relative config cwd`，junction worktree 环境预存在失败，`git status` 确认 subagent-acp 无本 job 改动，与本需求无关）✅
+  - lint（`tsx scripts/run-oxlint.ts .`）：exit 0 ✅
+- **API 契约文档**：`docs/subsystems/subagent-decision-answer.md`（+ `.zh.md` + `.i18n.yaml`，配对校验一致）——端点/RPC 形状（`subagents.prompt` answers 参数 + `subagents.answer`/`subagents.questions`）、`AskUserQuestionAnswer` 参数形状（`{ id, selected, custom? }` 裸数组）、错误形状（`NOT_PENDING` → `not-found`、zod `bad-request`）、与宿主 questions 域对齐、agent-busy fence 语义、父代理/外部客户端示例。
+
+**验证结论**: SC-001/SC-002/SC-003 全部达成——RED 失败原因=通道缺失、GREEN 全转绿、REFACTOR 回归全绿（普通 session.prompt agent-busy 行为不变，remotes 回归红线通过）。
