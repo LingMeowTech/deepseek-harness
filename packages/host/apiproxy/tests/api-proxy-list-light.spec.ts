@@ -35,7 +35,7 @@ function request<P>(payload: P): RpcRequest<P> {
   return { rpcId: RpcId(`list-light-${String(nextRpc++)}`), payload }
 }
 
-const titleUnit = (): ProjectionDefinition<'test/list-title', string> => ({
+const titleUnit = () => ({
   key: 'test/list-title',
   stateSchema: z.string(),
   init: () => '',
