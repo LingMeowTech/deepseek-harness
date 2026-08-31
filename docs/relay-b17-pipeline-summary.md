@@ -11,6 +11,7 @@
 - **目标仓库**: deepseek-harness（origin: https://github.com/LingMeowTech/deepseek-harness.git，TypeScript/pnpm）
 - **worktree 根**: `C:/Users/miao/Projects/LingMiaoTech/deepseek-harness/`
 - **时间线**: 2026-08-31 07:40（Spec 创建）→ 09:10（state 收尾）→ 09:15（pipeline 收尾）
+- **收尾 commit**: `5ab07fe9c7`（[Add] B17 pipeline 收尾接力标记，已推 origin dev-20260831-b17-verify）
 
 ## 各 state/job 完成情况
 
