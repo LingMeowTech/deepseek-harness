@@ -34,3 +34,11 @@
 
 - 宿主由泠总经泠喵观测站 app 启动；修复合入后需重启宿主生效；
 - 本 B17 无修复可合入，重启与否由监督侧协调；本 job 未启动宿主、未合并 main。
+
+---
+
+## 本次交付 job 复核记录（commit 短哈希同步，2026-08-31 11:5x UTC+8）
+
+- `git ls-remote origin dev-20260831-b17-verify` 复验：分支存在，`59f9d975bfc2156e674658b98125b1f724ad27a7`（短哈希 `59f9d975bf`）与本地 HEAD 一致，无待推送提交，工作区干净；
+- `.lmo/output.json` 与 runner 节点 output（runner_data/node_output/{stage_id}.json）中 commit 短哈希已由 `414369bd0e` 同步至 `59f9d975bf`；
+- 阻塞结论（三个实现 job 3dcb/3dcc/3dce st4 但零产物）与既有复核记录一致，无需修订；本 job 未启动宿主、未合并 main。
