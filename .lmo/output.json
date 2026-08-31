@@ -1,69 +1,24 @@
 {
   "result": [
     {
-      "type": "string",
-      "name": "blocker_confirmed",
-      "value": "CONFIRMED",
-      "note": "三分支实现 job 未产出任何实现提交/产物，阻塞成立"
-    },
-    {
-      "type": "json",
-      "name": "evidence",
-      "value": {
-        "pipeline_id": "01a054fe-5614-7fd8-b877-ca9ecdad814f",
-        "pipeline_name": "runner-B17-dsh-disk-governance",
-        "state": "01a054fe-567e-7577-a867-f3422e1e4c67 [[B17] dsh 磁盘疯狂读写与卡死治理]",
-        "base_commit": "10c2df77accf884752331e0588c510d07498f7b4",
-        "origin_remote": "github.com/LingMeowTech/deepseek-harness",
-        "origin_branches_found": ["dev-20260831-b13-subagent-decision-answer", "dev-20260831-b17-spec"],
-        "implementation_branches": {
-          "dev-20260831-projcache": {
-            "on_origin": false,
-            "worktree": "wt-dev-20260831-projcache",
-            "head": "10c2df77ac (== base, 无实现提交)",
-            "commits_beyond_base": 0,
-            "reflog": "branch: Created from HEAD (仅创建，无提交)",
-            "git_status": "clean（无任何改动/未跟踪文件）",
-            "output_json": "MISSING",
-            "relay_marker": "NONE"
-          },
-          "dev-20260831-list-light": {
-            "on_origin": false,
-            "worktree": "wt-dev-20260831-list-light",
-            "head": "10c2df77ac (== base, 无实现提交)",
-            "commits_beyond_base": 0,
-            "reflog": "branch: Created from HEAD (仅创建，无提交)",
-            "git_status": "1 个未跟踪文件 packages/host/apiproxy/tests/api-proxy-list-light.spec.ts",
-            "untracked_file_note": "仅为 TDD RED 阶段的失败测试 spec（引用 projection:'none'/snapshot 等疑似未实现 API），未提交、未验证通过、GREEN 实现代码不存在",
-            "output_json": "MISSING",
-            "relay_marker": "NONE"
-          },
-          "dev-20260831-archive": {
-            "on_origin": false,
-            "worktree": "wt-dev-20260831-archive",
-            "head": "10c2df77ac (== base, 无实现提交)",
-            "commits_beyond_base": 0,
-            "reflog": "branch: Created from HEAD (仅创建，无提交)",
-            "git_status": "clean（无任何改动/未跟踪文件）",
-            "output_json": "MISSING",
-            "relay_marker": "NONE"
-          }
-        },
-        "server_job_status": {
-          "job 01a05508-3dcb [实现1][TDD] projcache": "st4 已完成",
-          "job 01a05508-3dcc [实现2][TDD] list-light": "st4 已完成",
-          "job 01a05508-3dce [实现3][TDD] archive": "st4 已完成",
-          "验证/交付/总结 job": "st0 待执行"
-        },
-        "runner_pickup": "11 个 runner 节点列表中均未出现 projcache/list-light/archive/B17 实现 job 的节点记录（无 runner 认领/执行证据）"
-      },
-      "note": "服务端三个实现 job 均标 st4 完成，但本地/远端均无实现提交、无 output.json、无 relay 标记，且无任何 runner 认领执行记录"
+      "type": "markdown",
+      "name": "b17-delivery-report",
+      "value": "B17 磁盘治理交付摘要：⛔ 交付阻塞——三个功能块（projcache 增量落盘 / session.list 轻量化 / 旧会话归档）无实现代码可交付。交付 job 已完成机械步骤（分支 push / ls-remote 验证 / 交付记录 / 接力标记），但验收断言（projcache 写次数上限 / list <200ms / 归档仅元数据加载）与磁盘写频率前后对比均因实现缺失而无数据，未伪造。三个实现 job（3dcb/3dcc/3dce）服务器标记 st4 但无分支/无提交/无产物/无 relay 标记，状态不一致，建议监督侧协调重跑后重走验证→交付。宿主重启由监督侧协调，本 job 未启动宿主、未合并 main。"
     },
     {
       "type": "string",
-      "name": "conclusion",
-      "value": "实现 job 未真正执行产出：代码提交不存在（本地三分支均停留在 base 提交 10c2df77ac，reflog 仅 branch created；origin 无对应分支）。三分支实现 job 被标 st4 完成但零产物，阻塞成立，需重跑实现 job（TDD RED→GREEN）后再验证",
-      "note": "需重跑 实现1/实现2/实现3，并要求每 job 提交代码 + 写 .lmo/output.json + relay 标记 + 推送 origin"
+      "name": "branch",
+      "value": "dev-20260831-b17-verify"
+    },
+    {
+      "type": "string",
+      "name": "commit",
+      "value": "7d718aa0db"
+    },
+    {
+      "type": "string",
+      "name": "status",
+      "value": "blocked"
     }
   ]
 }
