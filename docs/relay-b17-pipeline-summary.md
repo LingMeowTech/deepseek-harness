@@ -66,3 +66,16 @@
 - **确认结论**: 上方汇总内容准确，无需修订；实现 job（3dcb/3dcc/3dce）零产物状态与 st4 不一致，遗留风险同上方建议
 - **最新 commit**: f79afc1e5（[Update] B17 pipeline 收尾接力标记补充收尾 commit，已推 origin dev-20260831-b17-verify）
 - **Issue 评论**: 复核 Gitea 查询 dsh-lmtech-plugins 仍无 B17 匹配 issue；deepseek-harness 无 Gitea 仓库（在 GitHub，本机无 GitHub 凭据）——确无匹配 issue，跳过 Pipeline Summary 评论，原因如上记录
+
+---
+
+## 本次 Pipeline 收尾复核记录（pipeline 收尾节点第三次执行确认）
+
+- **复核时间**: 2026-08-31 09:26 UTC+8
+- **节点**: 01a05508-3dd3-760c-aa1a-07ad0aa0acee（[总结][pipeline 收尾]）
+- **循环判定**: 非循环 DAG（is_looping=False），按非循环 Pipeline Summary 流程收尾
+- **上游输入**: state 收尾输出（阻塞：实现缺失）已读取，汇总内容与 relay 记录一致，无需修订
+- **Gitea 复核**: LingMeowObservatory 7 个 open issue 与 dsh-lmtech-plugins（无 open issue）均无 B17 匹配；
+  Gitea 无 deepseek-harness 仓库（目标仓库在 GitHub，本机无 GitHub 凭据）——确无匹配 issue，
+  跳过 Pipeline Summary 评论，原因沿用上方记录
+- **结论**: 本 pipeline 收尾节点完成，output.json 如实标记（含阻塞状态），不留遗留动作
