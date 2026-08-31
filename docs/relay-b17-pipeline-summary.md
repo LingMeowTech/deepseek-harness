@@ -79,3 +79,18 @@
   Gitea 无 deepseek-harness 仓库（目标仓库在 GitHub，本机无 GitHub 凭据）——确无匹配 issue，
   跳过 Pipeline Summary 评论，原因沿用上方记录
 - **结论**: 本 pipeline 收尾节点完成，output.json 如实标记（含阻塞状态），不留遗留动作
+
+---
+
+## 本次 Pipeline 收尾复核记录（pipeline 收尾节点第四次执行确认）
+
+- **复核时间**: 2026-08-31 09:29 UTC+8
+- **节点**: 01a05508-3dd3-760c-aa1a-07ad0aa0acee（[总结][pipeline 收尾]）
+- **循环判定**: 非循环 DAG（is_looping=False），按非循环 Pipeline Summary 流程收尾
+- **上游输入**: state 收尾输出（阻塞：实现缺失）已读取，汇总内容与 relay 记录一致，无需修订
+- **Gitea 复核**: 实查 LingMeowObservatory（7 个 open issue）与 dsh-lmtech-plugins（无 open issue）
+  均无 B17「dsh 磁盘疯狂读写与卡死治理」匹配；Gitea 无 deepseek-harness 仓库
+  （目标仓库在 GitHub，本机无 GitHub 凭据）——确无匹配 issue，跳过 Pipeline Summary 评论，
+  原因沿用上方记录
+- **结论**: 本 pipeline 收尾节点完成（第四次执行），汇总内容/验证结论/遗留风险与三次复核一致，
+  output.json 如实标记（含阻塞状态），不留遗留动作
