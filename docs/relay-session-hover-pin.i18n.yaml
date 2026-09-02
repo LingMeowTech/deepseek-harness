@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write docs/relay-session-hover-pin.md
-relay-session-hover-pin.md: 951dfbcafe0546612e35169568839e60e65747f6
-relay-session-hover-pin.zh.md: 2063cac429f827bd5eafb98be7416dee46363add
