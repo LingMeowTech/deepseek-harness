@@ -446,7 +446,12 @@ export class SessionManager {
     this.notifier.markDirty()
     this.listInflight = (async () => {
       try {
-        const { result } = await this.api.sessions.list({})
+        // Lightweight polling: metadata-only rows. Per-session projection stores
+        // are seeded by history tails and `session/projection` push frames, and
+        // their existing values persist across a blockless baseline — seeding
+        // here would only rewrite identical watermark snapshots (seq-identical
+        // no-ops) while making every poll fold 1100+ projection rows on the host.
+        const { result } = await this.api.sessions.list({ projection: 'none' })
         if (result.ok) {
           const baseline = this.listPhase === 'pending'
             ? result.value.items
@@ -478,11 +483,10 @@ export class SessionManager {
             session.handleRunning(s.running)
           }
           // Seed each row's projection baseline into the per-session value
-          // store (cold titles surface without opening the session). Per-key
-          // apply, not seed(): the list block is a partial baseline — the
-          // cold cache serves only version-matching keys — so an absent key
-          // must not clear; higher-seq-wins still keeps a stale list block
-          // from overwriting a newer push frame or tail baseline.
+          // store when the block is present (full v1 rows carry one). The
+          // lightweight baseline serves no projection block; per-session
+          // stores keep their values and stay fed by history tails and
+          // `session/projection` push frames.
           for (const s of result.value.items) {
             const block = s.projections
             if (block === undefined) continue

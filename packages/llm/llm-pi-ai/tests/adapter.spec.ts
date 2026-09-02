@@ -71,7 +71,9 @@ describe('PiAiAdapter provider routing', () => {
     })
     expect(result.message.content).toEqual([{ type: 'text', text: 'hello' }])
     expect(result.finish).toEqual({ kind: 'stop' })
-    expect(result.usage).toEqual({ inputTokens: 3, outputTokens: 1 })
+    // B6: pi-ai always reports a reasoning breakdown (0 when the wire omits it),
+    // so mapUsage surfaces reasoningTokens: 0 alongside the disjoint counts.
+    expect(result.usage).toEqual({ inputTokens: 3, outputTokens: 1, reasoningTokens: 0 })
     expect(server.paths).toEqual(['/chat/completions'])
   })
 

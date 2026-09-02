@@ -1671,13 +1671,16 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
   /**
    * Build the session.list baseline shared by listing and search visibility.
    * Attached sessions come from memory; servable cold sessions merge from
-   * persistence, and the final order is newest-first.
+   * persistence, and the final order is newest-first. `includeProjections`
+   * false serves metadata-only rows: the projection fold (attached) and the
+   * persisted cache read (cold) are skipped entirely — the high-frequency
+   * polling mode, where 1100+ sessions must list well under the wire budget.
    */
-  async function listVisibleSessionSummaries(signal?: AbortSignal): Promise<SessionSummary[]> {
+  async function listVisibleSessionSummaries(signal?: AbortSignal, includeProjections = true): Promise<SessionSummary[]> {
     signal?.throwIfAborted()
     const summarizeAttached = (session: Session): SessionSummary => {
       const agent = ctx.agents.get(session.id)
-      const projections = listProjectionsFor(ctx, session.header, session)
+      const projections = includeProjections ? listProjectionsFor(ctx, session.header, session) : undefined
       return {
         ...summarize(session, agent?.status === 'running'),
         ...projections === undefined ? {} : { projections },
@@ -1698,7 +1701,8 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           batch.map(async (meta) => {
             // Projection hints remain optional. Blank verification may read
             // this Session's artifact only when it passes the configured size check.
-            const projections = listProjectionsFor(ctx, meta, undefined)
+            // Lightweight mode skips the cache read entirely (no projection column).
+            const projections = includeProjections ? listProjectionsFor(ctx, meta, undefined) : undefined
             const summary = await summarizeCold(
               ctx,
               persistence,
@@ -1952,7 +1956,9 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       // Logs without a cwd are not served; every session records its project
       // at create time.
       async list(request) {
-        return ok(request, { items: await listVisibleSessionSummaries() })
+        return ok(request, {
+          items: await listVisibleSessionSummaries(undefined, request.payload.projection !== 'none'),
+        })
       },
 
       async search(request, signal) {
