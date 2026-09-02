@@ -15,7 +15,6 @@ import type { Session } from '@deepseek-ai/dsh-session'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import type { RpcRequest } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
 import { RpcId } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
@@ -36,13 +35,13 @@ function request<P>(payload: P): RpcRequest<P> {
 }
 
 const titleUnit = () => ({
-  key: 'test/list-title',
+  key: 'test/list-title' as const,
   stateSchema: z.string(),
   init: () => '',
-  apply: state => state,
+  apply: (state: string) => state,
   wire: {
     viewSchema: z.object({ title: z.string() }).nullable(),
-    view: state => (state ? { title: state } : null),
+    view: (state: string) => (state ? { title: state } : null),
   },
   stateVersion: 1,
 })
