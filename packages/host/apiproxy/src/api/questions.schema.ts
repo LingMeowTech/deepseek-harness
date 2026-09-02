@@ -10,13 +10,16 @@ import type { QuestionResponsePayload } from './questions.ts'
 import type { Wire } from './rpc.schema.ts'
 import { sessionIdSchema } from './sessions.schema.ts'
 
+/** One answer within an AskUserQuestionAnswer batch, validated strictly. */
+export const askUserQuestionAnswerItemSchema = z.object({
+  id: z.string(),
+  selected: z.array(z.string()),
+  custom: z.string().optional(),
+}) satisfies z.ZodType<Wire<AskUserQuestionAnswer['answers'][number]>>
+
 /** AskUserQuestionAnswer validated strictly against core dsh-user-questions. */
 export const askUserQuestionAnswerSchema = z.object({
-  answers: z.array(z.object({
-    id: z.string(),
-    selected: z.array(z.string()),
-    custom: z.string().optional(),
-  })),
+  answers: z.array(askUserQuestionAnswerItemSchema),
 }) satisfies z.ZodType<Wire<AskUserQuestionAnswer>>
 
 /** Question answer payload (the result.value slot of a client-response). */

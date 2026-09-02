@@ -2614,6 +2614,8 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         messageId: `fixture-message-${request.payload.childSessionId}` as never,
       })),
       interrupt: request => Promise.resolve(ok(request, { accepted: true as const })),
+      answer: request => Promise.resolve(ok(request, { accepted: true as const })),
+      questions: request => Promise.resolve(ok(request, { questions: [] as never })),
     },
     host: {
       describe: request => ok(request, {
@@ -3191,6 +3193,8 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'subagent.history': return this.api.subagents.history(request)
       case 'subagent.prompt': return this.api.subagents.prompt(request, signal)
       case 'subagent.interrupt': return this.api.subagents.interrupt(request)
+      case 'subagent.answer': return this.api.subagents.answer(request)
+      case 'subagent.questions': return this.api.subagents.questions(request)
       case 'host.describe': return this.api.host.describe(request)
       case 'host.pickDirectory': return this.api.host.pickDirectory(request, new AbortController().signal)
       case 'host.listDirectory': return this.api.host.listDirectory(request, new AbortController().signal)

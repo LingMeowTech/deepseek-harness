@@ -37,6 +37,8 @@ export interface RpcMethodMap {
   'subagent.list': SubagentsApi['list']
   'subagent.history': SubagentsApi['history']
   'subagent.prompt': SubagentsApi['prompt']
+  'subagent.answer': SubagentsApi['answer']
+  'subagent.questions': SubagentsApi['questions']
   'subagent.interrupt': SubagentsApi['interrupt']
   'host.describe': HostApi['describe']
   'host.pickDirectory': HostApi['pickDirectory']

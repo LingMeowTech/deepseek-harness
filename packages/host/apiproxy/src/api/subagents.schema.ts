@@ -7,6 +7,7 @@ import type { Wire } from './rpc.schema.ts'
 import {
   contentBlockSchema, historyEntrySchema, sessionIdSchema, sessionProjectionsBlockSchema,
 } from './sessions.schema.ts'
+import { askUserQuestionAnswerItemSchema } from './questions.schema.ts'
 import type { SubagentListEntry } from './subagents.ts'
 
 /** Healthy and diagnostic durable catalog rows. */
@@ -68,7 +69,42 @@ export const subagentPromptRequestSchema = z.object({
   mode: z.literal('continuable'),
   content: z.array(contentBlockSchema),
   clientTimeZone: z.string().optional(),
+  answers: z.array(askUserQuestionAnswerItemSchema).optional(),
 }) as unknown as z.ZodType<RequestPayload<'subagent.prompt'>>
+
+/** subagent.answer request payload (decision-answer channel). */
+export const subagentAnswerRequestSchema = z.object({
+  parentSessionId: sessionIdSchema,
+  childSessionId: sessionIdSchema,
+  mode: z.literal('continuable'),
+  answers: z.array(askUserQuestionAnswerItemSchema),
+}) as unknown as z.ZodType<RequestPayload<'subagent.answer'>>
+
+/** subagent.answer response value. */
+export const subagentAnswerValueSchema = z.object({
+  accepted: z.literal(true),
+}) satisfies z.ZodType<Wire<ResponseValue<'subagent.answer'>>>
+
+/** subagent.questions request payload (decision-answer channel). */
+export const subagentQuestionsRequestSchema = z.object({
+  parentSessionId: sessionIdSchema,
+  childSessionId: sessionIdSchema,
+  mode: z.literal('continuable'),
+}) satisfies z.ZodType<Wire<RequestPayload<'subagent.questions'>>>
+
+/** subagent.questions response value. */
+export const subagentQuestionsValueSchema = z.object({
+  questions: z.array(z.object({
+    id: z.string(),
+    question: z.string(),
+    header: z.string().optional(),
+    options: z.array(z.object({
+      label: z.string(),
+      description: z.string().optional(),
+    })).optional(),
+    multiSelect: z.boolean().optional(),
+  })),
+}) satisfies z.ZodType<Wire<ResponseValue<'subagent.questions'>>>
 
 /** subagent.interrupt request payload. */
 export const subagentInterruptRequestSchema = z.object({

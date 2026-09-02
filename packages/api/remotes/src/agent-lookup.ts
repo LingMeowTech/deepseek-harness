@@ -209,3 +209,22 @@ export function createApiRemoteAgentResolver(
 
   return agentFor
 }
+
+/**
+ * Resolve a session through the decision-answer path, bypassing the
+ * subagent-ownership fence. Ordinary Host routing rejects subagent-owned
+ * identities with `agent-busy` (use subagent delivery), but the decision-answer
+ * channel must be able to resume such a session so an external client or the
+ * parent can answer a parked ask. The generic
+ * {@link createApiRemoteAgentResolver} fence is unchanged.
+ * @param ctx - owning Host Context carrying the live Agent registry.
+ * @param sessionId - durable identity of the subagent-owned session to resume.
+ * @returns the resumed agent envelope (never an `agent-busy` error).
+ */
+export async function resolveDecisionAnswerAgent(
+  ctx: Context,
+  sessionId: SessionId,
+): Promise<ApiRemoteAgentResult> {
+  const handle = await ctx.agents.resume({ resumeSessionId: sessionId })
+  return { agent: handle.agent }
+}

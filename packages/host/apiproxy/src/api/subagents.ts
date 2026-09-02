@@ -7,6 +7,7 @@
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm/types'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { AskUserQuestionAnswerItem, AskUserQuestionItem } from '@deepseek-ai/dsh-user-questions/types'
 import type { RpcRequest, RpcResponse } from './rpc.ts'
 import type { HistoryEntry, SessionProjectionsBlock } from './sessions.ts'
 
@@ -93,6 +94,9 @@ export interface SubagentsApi {
    * parent's continuation owner. Success identifies the message accepted by
    * the child's FIFO inbox; later execution is independent of this request.
    * Optional browser-zone provenance is validated and logged on that message.
+   * A structured `answers` batch instead settles the child's parked decision
+   * ask (decision-answer channel): the child resumes its current turn with the
+   * chosen option, and no content message is enqueued.
    */
   prompt(
     request: RpcRequest<
@@ -100,10 +104,36 @@ export interface SubagentsApi {
         content: ContentBlock[]
         /** Optional browser zone sampled for this exact human prompt. */
         clientTimeZone?: string
+        /** Structured decision answers for the child's parked ask. */
+        answers?: AskUserQuestionAnswerItem[]
       }
     >,
     signal: AbortSignal,
   ): Promise<RpcResponse<SubagentPromptReceipt>>
+
+  /**
+   * Settles a continuable child's parked decision ask with a structured answer
+   * batch (decision-answer channel). One ask is answered as a whole batch; the
+   * question ids echo the rpcIds of the parked questions. A batch naming no
+   * parked ask returns a structured not-found error, never a silent success.
+   */
+  answer(
+    request: RpcRequest<
+      Extract<SubagentAddress, { mode: 'continuable' }> & {
+        answers: AskUserQuestionAnswerItem[]
+      }
+    >,
+    signal?: AbortSignal,
+  ): Promise<RpcResponse<{ accepted: true }>>
+
+  /**
+   * Lists the parked decision asks of one continuable child, if any
+   * (decision-answer channel). An empty array means no ask is currently
+   * pending.
+   */
+  questions(
+    request: RpcRequest<Extract<SubagentAddress, { mode: 'continuable' }>>,
+  ): Promise<RpcResponse<{ questions: AskUserQuestionItem[] }>>
 
   /**
    * Interrupts a live continuable child's current turn under the address's

@@ -92,6 +92,8 @@ export interface RpcErrorDetailsMap {
   'subagent-not-resumable': { childSessionId: SessionId }
   'subagent-unauthorized': { childSessionId: SessionId }
   'subagent-delivery-unavailable': { childSessionId: SessionId }
+  /** A decision-answer named no parked ask (decision-answer channel). */
+  'not-found': { childSessionId: SessionId }
   'internal': {}
 }
 
