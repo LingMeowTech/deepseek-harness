@@ -1,53 +1,39 @@
 /**
  * The workspace/session browsing region filling the sidebar shell's
  * `sidebar.workspaces` hole: section header (title + view options + add
- * workspace), search, the grouped tree or flat list, and the workspace
- * dialogs. Wide state renders the full browser; rail state renders the two
- * region icons (search / add workspace) as 36px controls on the shell's shared
- * rail entry path, each requesting expansion through the owner share. Adding
- * is the header button's one action, so it raises the directory flow with no
- * menu in between; the flow and its error dialog live in WorkspacePicker
- * (same package — direct composition, no slot between them).
+ * workspace), the grouped tree or flat list, and the workspace dialogs. The
+ * shell owns the search box and passes its raw query down through
+ * `searchQuery`; this region parses its own scope (`workspace:` / `pipeline:`)
+ * and renders search results only while a term resolves. Wide state renders
+ * the full browser; rail state renders the add-workspace 36px control on the
+ * shell's shared rail entry path. Adding is the header button's one action,
+ * so it raises the directory flow with no menu in between; the flow and its
+ * error dialog live in WorkspacePicker (same package — direct composition, no
+ * slot between them).
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  Button, IconCloseFill14, IconPersonalizationOutline16,
-  IconProjectAddOutline16, IconSearchOutline16, Menu, Modal, Tooltip,
+  Button, IconPersonalizationOutline16, IconProjectAddOutline16, Menu, Modal, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   SessionId, SessionListState, SessionSearchResultItem, WorkspaceId, WorkspaceView,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import type { WorkspaceBrowserProps } from './contract/slots.ts'
 import type { SessionNode, SessionOrderBy } from './tree.ts'
-import { deriveFlat, deriveGroups, deriveSearchResults, UNGROUPED_KEY } from './tree.ts'
+import {
+  deriveFlat, deriveGroups, deriveSearchResults, PIPELINE_SESSION_TAG, UNGROUPED_KEY,
+  withoutPipelineSessions, workspaceSearchTerm,
+} from './tree.ts'
 import { ProjectRowItem, SearchResultItem, SessionNodeItem } from './rows/Rows.tsx'
 import { FLAT_SESSION_ORDER_KEY } from './stores.ts'
 import { WorkspacePickFlow } from './WorkspacePicker.tsx'
 import css from './WorkspaceBrowser.module.css'
 
-/**
- * Column slide length (--ds-transition-duration-slow): rail-search focus waits it out —
- * focus() forces a synchronous layout and would jank the slide.
- */
-const EXPAND_SLIDE_MS = 300
-/** Pause between the latest keystroke and a Host content-search request. */
+/** Pause between the latest query change and a Host content-search request. */
 const SEARCH_DEBOUNCE_MS = 250
-/** `session.search` wire bound, measured in JavaScript UTF-16 code units. */
-const SEARCH_QUERY_MAX_CODE_UNITS = 500
 /** Session rows visible per Workspace before the local overflow control. */
 const COLLAPSED_SESSION_LIMIT = 5
-
-/** Keep controlled input and RPC payload inside the session.search wire contract. */
-function sanitizeSearchQuery(value: string): string {
-  const withoutNul = value.replaceAll('\0', '')
-  if (withoutNul.length <= SEARCH_QUERY_MAX_CODE_UNITS) return withoutNul
-  let end = SEARCH_QUERY_MAX_CODE_UNITS
-  const last = withoutNul.charCodeAt(end - 1)
-  const next = withoutNul.charCodeAt(end)
-  if (last >= 0xD800 && last <= 0xDBFF && next >= 0xDC00 && next <= 0xDFFF) end--
-  return withoutNul.slice(0, end)
-}
 
 /** Immutable membership toggle for the local expand-all array. */
 function toggled(list: readonly string[], key: string): string[] {
@@ -103,12 +89,6 @@ function compareSessionRecency(a: SessionId, b: SessionId, byId: SessionListStat
   return a < b ? -1 : 1
 }
 
-/** Lead an order with the active Session so the session in use stays on top. */
-function withActiveLead(order: readonly SessionId[], current: SessionId | undefined): SessionId[] {
-  if (current === undefined || !order.includes(current)) return [...order]
-  return [current, ...order.filter(id => id !== current)]
-}
-
 /** Reconcile one editable order account and apply its activity-promotion policy. */
 function nextSessionOrderAccount({
   sessionIds, previousOrder, previousUpdatedAt, list, orderBy, sortByRecency,
@@ -136,10 +116,6 @@ function nextSessionOrderAccount({
       order = [...promoted, ...order.filter(id => !promotedIds.has(id))]
     }
   }
-  // The active session always leads the activity order: a freshly created or
-  // selected session stays on top even while other sessions receive later
-  // activity. Manual order is exempt (the user owns that arrangement).
-  if (orderBy === 'updated') order = withActiveLead(order, list.current)
   const updatedAt: Record<string, number> = {}
   for (const id of sessionIds) {
     const session = list.byId[id]
@@ -228,8 +204,6 @@ type SessionTreeProps = Pick<
   'useSessions' | 'startSession' | 'open' | 'forkSession'
   | 'insertWorkspaceBefore' | 'insertSessionBefore' | 't'
 > & {
-  /** Host account home for POSIX hover-path abbreviation. */
-  home?: string | undefined
   workspaces: readonly WorkspaceView[]
   /** Explicit persisted zero-or-five-session state by Workspace group. */
   groupExpansion: Readonly<Record<string, boolean>>
@@ -263,9 +237,9 @@ function SessionTree({
   onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive,
   insertWorkspaceBefore, insertSessionBefore, orderBy,
   groupExpansion, setGroupExpanded,
-  sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, home, t,
+  sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, t,
 }: SessionTreeProps) {
-  const list = useSessions(s => s)
+  const list = withoutPipelineSessions(useSessions(s => s))
   const current = list.current
   const [expandedSessionGroups, setExpandedSessionGroups] = useState<string[]>([])
   // Transient drag marker state; the selected mode owns the resulting order.
@@ -322,27 +296,22 @@ function SessionTree({
   const orderedWorkspaces = useMemo(() => {
     return workspaces.map((workspace) => {
       const stored = sessionOrderByAccount[workspace.workspaceId as string]
-      let sessionIds = reconciledSessionOrder(workspace.sessionIds, stored)
-      if (orderBy === 'updated') sessionIds = withActiveLead(sessionIds, list.current)
+      const sessionIds = reconciledSessionOrder(workspace.sessionIds, stored)
       return { ...workspace, sessionIds }
     })
-  }, [sessionOrderByAccount, workspaces, orderBy, list.current])
+  }, [sessionOrderByAccount, workspaces])
   const orderedUngroupedSessionIds = useMemo(
-    () => {
-      let order = reconciledSessionOrder(ungroupedSessionIds, sessionOrderByAccount[UNGROUPED_KEY])
-      if (orderBy === 'updated') order = withActiveLead(order, list.current)
-      return order
-    },
-    [sessionOrderByAccount, ungroupedSessionIds, orderBy, list.current],
+    () => reconciledSessionOrder(ungroupedSessionIds, sessionOrderByAccount[UNGROUPED_KEY]),
+    [sessionOrderByAccount, ungroupedSessionIds],
   )
   const groups = useMemo(
     () => deriveGroups(list, orderedWorkspaces, archivedSessionIds, {
       expandedGroups,
       ...(sessionOrderByAccount[UNGROUPED_KEY] === undefined
         ? {}
-        : { ungroupedOrder: orderedUngroupedSessionIds }),
+        : { ungroupedOrder: sessionOrderByAccount[UNGROUPED_KEY] }),
     }),
-    [list, orderedWorkspaces, archivedSessionIds, expandedGroups, sessionOrderByAccount, orderedUngroupedSessionIds],
+    [list, orderedWorkspaces, archivedSessionIds, expandedGroups, sessionOrderByAccount],
   )
   const now = Date.now()
   const commitSessionDrag = (activeDrag: DragState, over: NonNullable<DragState['over']>): void => {
@@ -467,7 +436,6 @@ function SessionTree({
             >
               <ProjectRowItem
                 group={group}
-                home={home}
                 t={t}
                 onToggle={() => {
                   if (group.expanded) {
@@ -579,7 +547,7 @@ function FlatList({
   | 'setSessionOrder'
   | 't'
 >) {
-  const list = useSessions(s => s)
+  const list = withoutPipelineSessions(useSessions(s => s))
   const baseRows = useMemo(
     () => deriveFlat(list, archivedSessionIds),
     [list, archivedSessionIds],
@@ -606,14 +574,12 @@ function FlatList({
   }, [list, orderBy, sessionOrderByAccount, sessionUpdatedAtByAccount, sessionIds, syncSessionOrderAccount])
   const rows = useMemo(() => {
     const byId = new Map(baseRows.map(row => [row.id, row]))
-    let order = reconciledSessionOrder(sessionIds, sessionOrderByAccount[FLAT_SESSION_ORDER_KEY])
-    if (orderBy === 'updated') order = withActiveLead(order, list.current)
-    return order
+    return reconciledSessionOrder(sessionIds, sessionOrderByAccount[FLAT_SESSION_ORDER_KEY])
       .flatMap((id) => {
         const row = byId.get(id)
         return row === undefined ? [] : [row]
       })
-  }, [baseRows, sessionOrderByAccount, sessionIds, orderBy, list.current])
+  }, [baseRows, sessionOrderByAccount, sessionIds])
   const [drag, setDrag] = useState<DragState | null>(null)
   const dropCommitted = useRef(false)
   useNativeDragAcceptance(drag !== null)
@@ -706,13 +672,22 @@ function SearchResults({
   remote: RemoteSearchState
   resultLimit: number
 }) {
-  const list = useSessions(s => s)
+  const list = withoutPipelineSessions(useSessions(s => s))
   const currentRemote = remote.query === query
     ? remote
     : { query, status: 'loading' as const, items: [], hasMore: false }
+  // Host content hits may name pipeline sessions; drop them before the merge
+  // so the ranked page never surfaces a session this region does not own.
+  const visibleRemote = useMemo(() => ({
+    ...currentRemote,
+    items: currentRemote.items.filter((item) => {
+      const tags = list.tagsBySession[item.sessionId]
+      return tags === undefined || !tags.includes(PIPELINE_SESSION_TAG)
+    }),
+  }), [currentRemote, list])
   const results = useMemo(
-    () => deriveSearchResults(list, workspaces, query, archivedSessionIds, currentRemote, resultLimit),
-    [list, workspaces, query, archivedSessionIds, currentRemote, resultLimit],
+    () => deriveSearchResults(list, workspaces, query, archivedSessionIds, visibleRemote, resultLimit),
+    [list, workspaces, query, archivedSessionIds, visibleRemote, resultLimit],
   )
   const pending = currentRemote.status === 'loading'
   const failed = currentRemote.status === 'error'
@@ -760,7 +735,7 @@ function SearchResults({
  */
 export function WorkspaceBrowser({
   wide,
-  expandSidebar,
+  searchQuery,
   useSessions,
   useWorkspaces,
   useStore,
@@ -778,11 +753,9 @@ export function WorkspaceBrowser({
   searchSessions,
   searchResultLimit,
   useDirectoryFlow,
-  useHostDescription,
   renderSlot,
   t,
 }: WorkspaceBrowserProps) {
-  const home = useHostDescription(description => description?.home)
   const workspaces = useWorkspaces(state => state.items)
   const workspacePhase = useWorkspaces(state => state.phase)
   const archivedSessionIds = useWorkspaces(state => state.archivedSessionIds)
@@ -794,31 +767,6 @@ export function WorkspaceBrowser({
   const groupExpansion = useStore(s => s.groupExpansion)
   const sessionOrderByAccount = useStore(s => s.sessionOrderByAccount)
   const sessionUpdatedAtByAccount = useStore(s => s.sessionUpdatedAtByAccount)
-  const currentBlankSessionId = useSessions((state) => {
-    const current = state.current
-    return current !== undefined && state.byId[current]?.blank === true ? current : undefined
-  })
-  const currentBlankAccount = currentBlankSessionId === undefined
-    ? undefined
-    : (workspaces.find(workspace => workspace.sessionIds.includes(currentBlankSessionId))
-      ?.workspaceId as string | undefined) ?? UNGROUPED_KEY
-  const promotedBlank = useRef<{ sessionId: SessionId; accountKey: string } | undefined>(undefined)
-  useEffect(() => {
-    if (currentBlankSessionId === undefined || currentBlankAccount === undefined) {
-      promotedBlank.current = undefined
-      return
-    }
-    if (promotedBlank.current?.sessionId === currentBlankSessionId
-      && promotedBlank.current.accountKey === currentBlankAccount) return
-    promotedBlank.current = { sessionId: currentBlankSessionId, accountKey: currentBlankAccount }
-    for (const accountKey of new Set([currentBlankAccount, FLAT_SESSION_ORDER_KEY])) {
-      const previous = sessionOrderByAccount[accountKey] ?? []
-      actions.setSessionOrder(accountKey, [
-        currentBlankSessionId,
-        ...previous.filter(id => id !== currentBlankSessionId),
-      ])
-    }
-  }, [actions.setSessionOrder, currentBlankAccount, currentBlankSessionId, sessionOrderByAccount])
   useEffect(() => {
     if (workspacePhase !== 'ready') return
     actions.retainAccountKeys([
@@ -827,77 +775,39 @@ export function WorkspaceBrowser({
       ...workspaces.map(workspace => workspace.workspaceId as string),
     ])
   }, [actions.retainAccountKeys, workspacePhase, workspaces])
-  // The query outlives the tree and the input (both wide-only) so collapsing
-  // does not silently drop an in-progress filter.
-  const [query, setQuery] = useState('')
-  const [searchExpanded, setSearchExpanded] = useState(false)
-  const normalizedQuery = sanitizeSearchQuery(query).trim()
+  // The shell owns the search box and passes its raw query down; this region
+  // parses its own scope and searches only a resolved term, so collapsing the
+  // column does not drop an in-progress filter.
+  const term = workspaceSearchTerm(searchQuery)
   const [remoteSearch, setRemoteSearch] = useState<RemoteSearchState>({
     query: '',
     status: 'idle',
     items: [],
     hasMore: false,
   })
-  const searchRoot = useRef<HTMLDivElement | null>(null)
-  const searchInput = useRef<HTMLInputElement | null>(null)
   // Section-header ＋ opens the picker menu (same popover in wide and rail
   // states; the menu anchors on this button).
   const [wsPickerOpen, setWsPickerOpen] = useState(false)
   const wsPlusRef = useRef<HTMLButtonElement>(null)
   const composingRef = useRef(false)
 
-  // Rail search = expand + land in the search box: the flag arms before the
-  // expand request; once the shell flips wide the input mounts and takes focus.
-  const [searchOnExpand, setSearchOnExpand] = useState(false)
   useEffect(() => {
-    if (wide && searchOnExpand) {
-      const timer = window.setTimeout(() => {
-        searchInput.current?.focus({ preventScroll: true })
-        setSearchOnExpand(false)
-      }, EXPAND_SLIDE_MS)
-      return () => { window.clearTimeout(timer) }
-    }
-  }, [wide, searchOnExpand])
-
-  useEffect(() => {
-    if (!wide || !searchExpanded || searchOnExpand) return
-    searchInput.current?.focus({ preventScroll: true })
-  }, [wide, searchExpanded, searchOnExpand])
-
-  // Outside-click dismissal stays off while the rail gesture is in flight
-  // (searchOnExpand): the rail click flips the shell wide and mounts this
-  // listener during its own dispatch, then keeps bubbling to document with
-  // the now-unmounted rail button as its target — outside searchRoot, so the
-  // listener would dismiss the search that click just opened.
-  useEffect(() => {
-    if (!wide || !searchExpanded || searchOnExpand) return
-    const onClick = (event: MouseEvent): void => {
-      if (!(event.target instanceof Node) || searchRoot.current?.contains(event.target) === true) return
-      searchInput.current?.blur()
-      if (normalizedQuery !== '') return
-      setSearchExpanded(false)
-    }
-    document.addEventListener('click', onClick)
-    return () => { document.removeEventListener('click', onClick) }
-  }, [normalizedQuery, wide, searchExpanded, searchOnExpand])
-
-  useEffect(() => {
-    if (normalizedQuery === '') {
+    if (term === null) {
       setRemoteSearch({ query: '', status: 'idle', items: [], hasMore: false })
       return
     }
     const controller = new AbortController()
     setRemoteSearch({
-      query: normalizedQuery,
+      query: term,
       status: 'loading',
       items: [],
       hasMore: false,
     })
     const timer = window.setTimeout(() => {
-      searchSessions(normalizedQuery, controller.signal).then((result) => {
+      searchSessions(term, controller.signal).then((result) => {
         if (controller.signal.aborted) return
         setRemoteSearch({
-          query: normalizedQuery,
+          query: term,
           status: 'ready',
           items: result.items,
           hasMore: result.hasMore,
@@ -905,7 +815,7 @@ export function WorkspaceBrowser({
       }).catch(() => {
         if (controller.signal.aborted) return
         setRemoteSearch({
-          query: normalizedQuery,
+          query: term,
           status: 'error',
           items: [],
           hasMore: false,
@@ -916,7 +826,7 @@ export function WorkspaceBrowser({
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [normalizedQuery, searchSessions])
+  }, [term, searchSessions])
 
   // Rename dialog (browser-owned so it outlives row unmounts during collapse).
   const [renameTarget, setRenameTarget] = useState<{ workspaceId: WorkspaceId; currentTitle: string } | null>(null)
@@ -1028,68 +938,11 @@ export function WorkspaceBrowser({
     <div className={clsx(css.root, !wide && css.rail)}>
       <div className={css.sectionHeader}>
         {wide && (
-          <span className={clsx(css.sectionLabel, css.wide, searchExpanded && css.sectionLabelHidden)}>
+          <span className={clsx(css.sectionLabel, css.wide)}>
             {groupBy === 'flat' ? t('section.sessions') : t('section.workspaces')}
           </span>
         )}
-        {wide && (
-          <div className={clsx(css.searchSlot, searchExpanded && css.searchSlotExpanded)}>
-            <div
-              ref={searchRoot}
-              className={clsx(css.search, searchExpanded && css.searchExpanded)}
-              onClick={() => {
-                setWsPickerOpen(false)
-                setSearchExpanded(true)
-                searchInput.current?.focus()
-              }}
-            >
-              <Tooltip label={t('search')} side="bottom" delayMs={500} disabled={searchExpanded}>
-                <button
-                  type="button"
-                  className={css.searchButton}
-                  aria-label={t('search.sessions.aria')}
-                  aria-expanded={searchExpanded}
-                  onClick={() => {
-                    setWsPickerOpen(false)
-                    setSearchExpanded(true)
-                  }}
-                >
-                  <IconSearchOutline16 size={searchExpanded ? 11 : 14} />
-                </button>
-              </Tooltip>
-              <input
-                ref={searchInput}
-                className={css.searchInput}
-                type="text"
-                placeholder={t('search.placeholder')}
-                maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
-                value={query}
-                tabIndex={searchExpanded ? 0 : -1}
-                onChange={(e) => { setQuery(sanitizeSearchQuery(e.target.value)) }}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Escape') return
-                  setQuery('')
-                  setSearchExpanded(false)
-                }}
-              />
-              {searchExpanded && (
-                <button
-                  type="button"
-                  className={css.clearButton}
-                  aria-label={t('search.clear')}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setQuery('')
-                    setSearchExpanded(false)
-                  }}
-                >
-                  <IconCloseFill14 />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-        <div className={clsx(css.headerActions, wide && searchExpanded && css.headerActionsHidden)}>
+        <div className={css.headerActions}>
           {wide && (
             <ViewOptionsMenu
               groupBy={groupBy}
@@ -1137,35 +990,17 @@ export function WorkspaceBrowser({
         />
       </div>
 
-      {/* The collapsed rail keeps search as its own 36px control. */}
-      {!wide && <div className={css.search}>
-        <Tooltip label={t('search')}>
-          <button
-            type="button"
-            className={css.searchButton}
-            aria-label={t('search.sessions.aria')}
-            onClick={() => {
-              setSearchExpanded(true)
-              setSearchOnExpand(true)
-              expandSidebar()
-            }}
-          >
-            <IconSearchOutline16 size={18} />
-          </button>
-        </Tooltip>
-      </div>}
-
       {/* Always-mounted seat keeps the region's flex slot while the list
           itself is wide-only. */}
       <div className={css.listArea}>
-        {wide && (normalizedQuery !== ''
+        {wide && (term !== null
           ? (
             <SearchResults
               useSessions={useSessions}
               open={open}
               workspaces={workspaces}
               archivedSessionIds={archivedSessionIds}
-              query={normalizedQuery}
+              query={term}
               remote={remoteSearch}
               resultLimit={searchResultLimit}
               t={t}
@@ -1204,7 +1039,6 @@ export function WorkspaceBrowser({
                 insertWorkspaceBefore={insertWorkspaceBefore}
                 insertSessionBefore={insertSessionBefore}
                 orderBy={orderBy}
-                home={home}
                 t={t}
                 onRenameRequest={(workspaceId, currentTitle) => {
                   setRenameTarget({ workspaceId, currentTitle })

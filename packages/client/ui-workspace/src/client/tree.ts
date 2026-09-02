@@ -15,6 +15,37 @@ export const UNGROUPED_KEY = ''
 /** Display label for the ungrouped bucket row. */
 export const UNGROUPED_LABEL = 'Ungrouped'
 
+/**
+ * The pipeline-session membership tag. Client-side mirror of the host
+ * `PIPELINE_SESSION_TAGS` first member (`@deepseek-ai/dsh-session-tags`);
+ * the client bundle never value-imports the host package.
+ */
+export const PIPELINE_SESSION_TAG = 'pipeline_id'
+
+/**
+ * Drop pipeline sessions (rows carrying {@link PIPELINE_SESSION_TAG}) from a
+ * list snapshot. Both `ids` and `byId` lose the tagged rows so grouped,
+ * flat, and search projections all hide them; `tagsBySession` is kept intact
+ * for surfaces that must also filter a separate id-bearing page. Returns the
+ * original reference when nothing is removed.
+ * @param list - sessions list snapshot.
+ * @returns the list without pipeline-session rows, or the input reference.
+ */
+export function withoutPipelineSessions(list: SessionListState): SessionListState {
+  const ids: SessionId[] = []
+  const excluded = new Set<SessionId>()
+  for (const id of list.ids) {
+    const tags = list.tagsBySession[id]
+    if (tags !== undefined && tags.includes(PIPELINE_SESSION_TAG)) excluded.add(id)
+    else ids.push(id)
+  }
+  if (excluded.size === 0) return list
+  const byId = Object.fromEntries(
+    Object.entries(list.byId).filter(([id]) => !excluded.has(id as SessionId)),
+  )
+  return { ...list, ids, byId }
+}
+
 /** One top-level session row in a group or the flat list. */
 export interface SessionNode {
   id: SessionId
@@ -101,6 +132,26 @@ export function workspaceLabel(cwd: string | undefined): string {
   if (cwd === undefined || cwd === '') return UNGROUPED_LABEL
   const base = cwd.replace(/[/\\]+$/, '').split(/[/\\]/).pop()
   return base !== undefined && base !== '' ? base : cwd
+}
+
+/**
+ * Parse the shell's raw search box into this region's search term. Blank
+ * input and `pipeline:`-scoped queries yield null (this region does not
+ * search); a `workspace:` prefix selects only its stem; anything else is the
+ * trimmed query verbatim. Prefix matching is case-insensitive.
+ * @param raw - the shell search box, raw and untrimmed.
+ * @returns the term to search, or null when this region stays in list view.
+ */
+export function workspaceSearchTerm(raw: string): string | null {
+  const trimmed = raw.trim()
+  if (trimmed === '') return null
+  const lower = trimmed.toLowerCase()
+  if (lower.startsWith('workspace:')) {
+    const stem = trimmed.slice('workspace:'.length).trim()
+    return stem === '' ? null : stem
+  }
+  if (lower.startsWith('pipeline:')) return null
+  return trimmed
 }
 
 /** Recency comparator: newest first, id as the deterministic tiebreak (ids are unique per group). */

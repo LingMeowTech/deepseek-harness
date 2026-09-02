@@ -144,6 +144,8 @@ export class FakeApiClient implements IApiClient {
     interrupt: (payload: unknown) => this.record('subagent.interrupt', payload, Promise.resolve(ok({
       accepted: true as const,
     }))),
+    answer: (payload: unknown) => this.record('subagent.answer', payload, Promise.resolve(ok({ accepted: true as const }))),
+    questions: (payload: unknown) => this.record('subagent.questions', payload, Promise.resolve(ok({ questions: [] }))),
   }
 
   readonly host: IApiClient['host'] = {

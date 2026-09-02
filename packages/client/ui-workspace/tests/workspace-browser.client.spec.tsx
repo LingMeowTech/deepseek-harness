@@ -30,7 +30,7 @@ const sessionState = (items: readonly SessionSummary[], overrides: Partial<Sessi
   byId: Object.fromEntries(items.map(item => [item.id, item])),
   current: undefined,
   phase: 'ready',
-  subagentsByParent: {}, jobsBySession: {},
+  subagentsByParent: {}, jobsBySession: {}, tagsBySession: {},
   currentAddress: undefined,
   ...overrides,
 })
@@ -63,7 +63,9 @@ function mount(overrides: Partial<WorkspaceBrowserProps> = {}) {
   const props: WorkspaceBrowserProps = {
     wide: true,
     expandSidebar: vi.fn(),
+    searchQuery: '',
     useSessions: hook(sessionState([])),
+    useHostDescription: hook({ version: '0-test', cwd: '/w', attachedSessions: 0, home: '/h', canOpenPath: true }),
     useWorkspaces: hook(workspaceState([])),
     useStore: bindSnapshotSelector(store),
     actions: store.actions,
@@ -80,7 +82,6 @@ function mount(overrides: Partial<WorkspaceBrowserProps> = {}) {
     insertSessionBefore: vi.fn(async () => {}),
     createWorkspace: vi.fn(async () => workspace('created', [])),
     useDirectoryFlow: bindSnapshotSelector({ getSnapshot: () => true, subscribe: () => () => {} }),
-    useHostDescription: selector => selector(undefined),
     renderSlot: ((_name: string, owner: { open: boolean }) => (owner.open ? <div data-testid="directory-flow" /> : null)) as never,
     t,
     ...overrides,
@@ -96,27 +97,6 @@ function rerender(b: ReturnType<typeof mount>, overrides: Partial<WorkspaceBrows
 }
 
 describe('WorkspaceBrowser', () => {
-  it('workspace hover card shows a POSIX home descendant as ~', () => {
-    vi.useFakeTimers()
-    try {
-      mount({
-        useWorkspaces: hook(workspaceState([{
-          ...workspace('project', []),
-          path: '/home/u/Documents/project',
-          title: 'Project',
-        }])),
-        useHostDescription: selector => selector({
-          version: '0', cwd: '/tmp', attachedSessions: 0, home: '/home/u', canOpenPath: false,
-        }),
-      })
-      fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
-      act(() => { vi.advanceTimersByTime(500) })
-      expect(screen.getByText('~/Documents/project')).toBeTruthy()
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
   it('prunes deleted Workspace view state only after the Workspace baseline is ready', async () => {
     const pending = {
       ...workspaceState([]),
@@ -336,44 +316,6 @@ describe('WorkspaceBrowser', () => {
     expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('two')
   })
 
-  it('keeps the active session on top of the Last updated order', async () => {
-    const initial = sessionState([summary('one', 3), summary('two', 5)], { current: sid('one') })
-    const b = mount({
-      useSessions: hook(initial),
-      useWorkspaces: hook(workspaceState([workspace('alpha', ['two', 'one'])])),
-    })
-    fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '最近更新' }))
-    await waitFor(() => {
-      const rows = screen.getAllByRole('treeitem').slice(1)
-      expect(rows[0]?.textContent).toContain('one')
-      expect(rows[1]?.textContent).toContain('two')
-      expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['one', 'two'])
-    })
-
-    // Later activity on another session promotes it below the active one.
-    const promoted = sessionState([summary('one', 3), summary('two', 6)], { current: sid('one') })
-    rerender(b, { useSessions: hook(promoted) })
-    await waitFor(() => {
-      const rows = screen.getAllByRole('treeitem').slice(1)
-      expect(rows[0]?.textContent).toContain('one')
-      expect(rows[1]?.textContent).toContain('two')
-      expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['one', 'two'])
-    })
-
-    // Manual order stays user-owned: the active session is not pinned there.
-    fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '手动排序' }))
-    const [one, two] = screen.getAllByRole('treeitem').slice(1) as [HTMLElement, HTMLElement]
-    two.getBoundingClientRect = () => ({
-      top: 150, bottom: 184, left: 0, right: 200, width: 200, height: 34, x: 0, y: 150, toJSON: () => ({}),
-    })
-    fireEvent.dragStart(one, { dataTransfer: dragData() })
-    fireDrag(two, 'drop', 180)
-    expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['two', 'one'])
-    expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('two')
-  })
-
   it('archives a session from the row menu and hides archived rows in both modes', async () => {
     const archiveSession = vi.fn(async () => {})
     const b = mount({
@@ -500,76 +442,10 @@ describe('WorkspaceBrowser', () => {
     expect(screen.getAllByText('新会话')).toHaveLength(1)
     // Search excludes blank rows entirely — neither the canonical stored
     // title nor the localized display label participates in matching.
-    fireEvent.change(screen.getByPlaceholderText('搜索会话…'), { target: { value: 'new session' } })
+    rerender(b, { searchQuery: 'new session' })
     expect(screen.queryByText('新会话')).toBeNull()
-    fireEvent.change(screen.getByPlaceholderText('搜索会话…'), { target: { value: '新会话' } })
+    rerender(b, { searchQuery: '新会话' })
     expect(screen.queryByText('新会话')).toBeNull()
-  })
-
-  it('promotes the blank selected by New Session in its grouped and flat orders', async () => {
-    const items = [
-      summary('old', 100),
-      summary('blank', 150, { blank: true }),
-      summary('mid', 200),
-    ]
-    const startSession = vi.fn()
-    const b = mount({
-      useSessions: hook(sessionState(items)),
-      useWorkspaces: hook(workspaceState([workspace('alpha', ['old', 'blank', 'mid'])])),
-      startSession,
-    })
-    await waitFor(() => {
-      expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['old', 'blank', 'mid'])
-    })
-    startSession.mockImplementation(() => {
-      rerender(b, { useSessions: hook(sessionState(items, { current: sid('blank') })) })
-    })
-    fireEvent.click(screen.getByRole('button', { name: '在“alpha”中新建会话' }))
-    expect(startSession).toHaveBeenCalledWith(wid('alpha'))
-    await waitFor(() => {
-      expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['blank', 'old', 'mid'])
-      expect(b.store.getSnapshot().sessionOrderByAccount[FLAT_SESSION_ORDER_KEY]).toEqual(['blank'])
-    })
-    b.store.actions.setGroupBy('flat')
-    await waitFor(() => {
-      expect(b.store.getSnapshot().sessionOrderByAccount[FLAT_SESSION_ORDER_KEY]).toEqual(['blank', 'mid', 'old'])
-    })
-  })
-
-  it('does not repeat blank promotion after a manual drag or the first prompt', async () => {
-    const insertSessionBefore = vi.fn(async () => {})
-    const b = mount({
-      useSessions: hook(sessionState([
-        summary('old', 100),
-        summary('blank', 150, { blank: true }),
-        summary('mid', 200),
-      ], { current: sid('blank') })),
-      useWorkspaces: hook(workspaceState([workspace('alpha', ['old', 'blank', 'mid'])])),
-      insertSessionBefore,
-    })
-    await waitFor(() => {
-      expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['blank', 'old', 'mid'])
-    })
-    const blank = screen.getByText('新会话').closest('[role="treeitem"]') as HTMLElement
-    const mid = screen.getByText('mid').closest('[role="treeitem"]') as HTMLElement
-    mid.getBoundingClientRect = () => ({
-      top: 150, bottom: 184, left: 0, right: 200, width: 200, height: 34, x: 0, y: 150, toJSON: () => ({}),
-    })
-    fireEvent.dragStart(blank, { dataTransfer: dragData() })
-    fireDrag(mid, 'drop', 180)
-    expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['old', 'mid', 'blank'])
-    expect(insertSessionBefore).toHaveBeenCalledWith(wid('alpha'), sid('blank'), undefined)
-
-    rerender(b, {
-      useSessions: hook(sessionState([
-        summary('old', 100),
-        summary('blank', 150),
-        summary('mid', 200),
-      ], { current: sid('blank') })),
-    })
-    await waitFor(() => {
-      expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['old', 'mid', 'blank'])
-    })
   })
 
   it('shows local metadata matches immediately, then clears back to the grouped tree', async () => {
@@ -579,13 +455,11 @@ describe('WorkspaceBrowser', () => {
         summary('needle-row', 2, { displayTitle: 'Needle row' }),
         summary('other-row', 1, { displayTitle: 'Other row' }),
       ])
-      mount({
+      const b = mount({
         useSessions: hook(sessions),
         useWorkspaces: hook(workspaceState([workspace('alpha', ['needle-row', 'other-row'])])),
       })
-      fireEvent.click(screen.getByRole('button', { name: '搜索会话' }))
-      const input = screen.getByPlaceholderText<HTMLInputElement>('搜索会话…')
-      fireEvent.change(input, { target: { value: 'needle' } })
+      rerender(b, { searchQuery: 'needle' })
       const resultTree = screen.getByRole('tree', { name: '搜索结果' })
       expect(screen.getByText('Needle row')).toBeTruthy()
       expect(screen.queryByText('Other row')).toBeNull()
@@ -593,39 +467,67 @@ describe('WorkspaceBrowser', () => {
       expect(status.textContent).toBe('正在搜索会话历史…')
       expect(resultTree.contains(status)).toBe(false)
 
-      fireEvent.change(input, { target: { value: 'zzz' } })
+      rerender(b, { searchQuery: 'zzz' })
       await act(async () => { await vi.advanceTimersByTimeAsync(250) })
       expect(screen.getByText('无匹配会话')).toBeTruthy()
-      fireEvent.click(screen.getByRole('button', { name: '清除搜索' }))
-      expect(input.value).toBe('')
+      rerender(b, { searchQuery: '' })
       expect(screen.getByRole('tree', { name: '会话' })).toBeTruthy()
-      // Clicking the field row focuses the input (wide mode).
-      fireEvent.click(input.parentElement as HTMLElement)
-      expect(document.activeElement).toBe(input)
     } finally {
       vi.useRealTimers()
     }
   })
 
-  it('collapses an empty search on outside click but keeps a non-empty query expanded', () => {
-    mount()
-    const search = screen.getByRole('button', { name: '搜索会话' })
-    fireEvent.click(search)
-    expect(search.getAttribute('aria-expanded')).toBe('true')
-    fireEvent.click(document.body)
-    expect(search.getAttribute('aria-expanded')).toBe('false')
+  it('searches the trimmed query when there is no scope prefix', async () => {
+    vi.useFakeTimers()
+    try {
+      const searchSessions = vi.fn(async () => ({ items: [], hasMore: false }))
+      const b = mount({ searchSessions })
+      rerender(b, { searchQuery: '  hello world  ' })
+      expect(screen.getByRole('tree', { name: '搜索结果' })).toBeTruthy()
+      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
+      expect(searchSessions).toHaveBeenCalledWith('hello world', expect.any(AbortSignal))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 
-    fireEvent.click(search)
-    const input = screen.getByPlaceholderText<HTMLInputElement>('搜索会话…')
-    fireEvent.change(input, { target: { value: '   ' } })
-    fireEvent.click(document.body)
-    expect(search.getAttribute('aria-expanded')).toBe('false')
+  it('searches only the workspace: stem and drops the scope prefix', async () => {
+    vi.useFakeTimers()
+    try {
+      const searchSessions = vi.fn(async () => ({ items: [], hasMore: false }))
+      const b = mount({
+        useSessions: hook(sessionState([summary('foo-row', 2, { displayTitle: 'Foo row' })])),
+        useWorkspaces: hook(workspaceState([workspace('alpha', ['foo-row'])])),
+        searchSessions,
+      })
+      rerender(b, { searchQuery: 'workspace:foo' })
+      expect(screen.getByText('Foo row')).toBeTruthy()
+      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
+      expect(searchSessions).toHaveBeenCalledWith('foo', expect.any(AbortSignal))
+      expect(searchSessions).not.toHaveBeenCalledWith('workspace:foo', expect.any(AbortSignal))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 
-    fireEvent.click(search)
-    fireEvent.change(input, { target: { value: 'kept' } })
-    fireEvent.click(document.body)
-    expect(search.getAttribute('aria-expanded')).toBe('true')
-    expect(input.value).toBe('kept')
+  it('keeps the list view and skips Host search for pipeline-scoped queries', async () => {
+    vi.useFakeTimers()
+    try {
+      const searchSessions = vi.fn(async () => ({ items: [], hasMore: false }))
+      const b = mount({
+        useSessions: hook(sessionState([summary('alpha-s', 1)])),
+        useWorkspaces: hook(workspaceState([workspace('alpha', ['alpha-s'])])),
+        searchSessions,
+      })
+      rerender(b, { searchQuery: 'pipeline:foo' })
+      // Still the grouped tree, not the search surface.
+      expect(screen.getByRole('tree', { name: '会话' })).toBeTruthy()
+      expect(screen.queryByRole('tree', { name: '搜索结果' })).toBeNull()
+      await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+      expect(searchSessions).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('adds Host content hits with context, shows the result bound, and opens without clearing the query', async () => {
@@ -636,7 +538,7 @@ describe('WorkspaceBrowser', () => {
         items: [{ sessionId: sid('body-hit'), snippet: '…the waterfall token appears here…' }],
         hasMore: true,
       }))
-      mount({
+      const b = mount({
         useSessions: hook(sessionState([
           summary('body-hit', 1, { displayTitle: 'Research notes' }),
         ])),
@@ -646,8 +548,7 @@ describe('WorkspaceBrowser', () => {
         open,
         searchSessions,
       })
-      const input = screen.getByPlaceholderText<HTMLInputElement>('搜索会话…')
-      fireEvent.change(input, { target: { value: 'waterfall token' } })
+      rerender(b, { searchQuery: 'waterfall token' })
       expect(screen.getByText('正在搜索会话历史…')).toBeTruthy()
       expect(screen.queryByText('Research notes')).toBeNull()
 
@@ -660,32 +561,8 @@ describe('WorkspaceBrowser', () => {
       expect(screen.getByText('仅显示前 20 条结果，请缩小搜索范围。')).toBeTruthy()
       fireEvent.click(screen.getByRole('treeitem'))
       expect(open).toHaveBeenCalledWith(sid('body-hit'))
-      expect(input.value).toBe('waterfall token')
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('bounds programmatic search input to a schema-valid request without splitting an astral character', async () => {
-    vi.useFakeTimers()
-    try {
-      const searchSessions = vi.fn(async () => ({ items: [], hasMore: false }))
-      mount({ searchSessions })
-      const input = screen.getByPlaceholderText<HTMLInputElement>('搜索会话…')
-      expect(input.maxLength).toBe(500)
-      fireEvent.change(input, { target: { value: 'y'.repeat(501) } })
-      expect(input.value).toBe('y'.repeat(500))
-      const expected = `prefix${'x'.repeat(493)}`
-      fireEvent.change(input, {
-        target: { value: `prefix\0${'x'.repeat(493)}😀tail` },
-      })
-
-      expect(input.value).toBe(expected)
-      expect(input.value.length).toBe(499)
-      expect(input.value).not.toContain('\0')
-      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
-      expect(searchSessions).toHaveBeenCalledOnce()
-      expect(searchSessions).toHaveBeenCalledWith(expected, expect.any(AbortSignal))
+      // The shell owns the query, so opening a result leaves results in place.
+      expect(screen.getByText('Research notes')).toBeTruthy()
     } finally {
       vi.useRealTimers()
     }
@@ -695,16 +572,14 @@ describe('WorkspaceBrowser', () => {
     vi.useFakeTimers()
     try {
       const searchSessions = vi.fn(async () => { throw new Error('index unavailable') })
-      mount({
+      const b = mount({
         useSessions: hook(sessionState([
           summary('local-hit', 1, { displayTitle: 'Needle title' }),
         ])),
         useWorkspaces: hook(workspaceState([workspace('alpha', ['local-hit'])])),
         searchSessions,
       })
-      fireEvent.change(screen.getByPlaceholderText('搜索会话…'), {
-        target: { value: 'needle' },
-      })
+      rerender(b, { searchQuery: 'needle' })
       expect(screen.getByText('Needle title')).toBeTruthy()
       await act(async () => { await vi.advanceTimersByTimeAsync(250) })
       expect(screen.getByText('Needle title')).toBeTruthy()
@@ -732,20 +607,19 @@ describe('WorkspaceBrowser', () => {
           items: [{ sessionId: sid('second-hit'), snippet: 'second excerpt' }],
           hasMore: false,
         }))
-      mount({
+      const b = mount({
         useSessions: hook(sessionState([
           summary('first-hit', 2, { displayTitle: 'Old result' }),
           summary('second-hit', 1, { displayTitle: 'Fresh result' }),
         ])),
         searchSessions,
       })
-      const input = screen.getByPlaceholderText('搜索会话…')
-      fireEvent.change(input, { target: { value: 'first' } })
+      rerender(b, { searchQuery: 'first' })
       await act(async () => { await vi.advanceTimersByTimeAsync(250) })
       const firstSignal = searchSessions.mock.calls[0]?.[1] as AbortSignal
       expect(firstSignal.aborted).toBe(false)
 
-      fireEvent.change(input, { target: { value: 'second' } })
+      rerender(b, { searchQuery: 'second' })
       expect(firstSignal.aborted).toBe(true)
       await act(async () => { await vi.advanceTimersByTimeAsync(250) })
       expect(screen.getByText('Fresh result')).toBeTruthy()
@@ -772,12 +646,11 @@ describe('WorkspaceBrowser', () => {
       const searchSessions = vi.fn((query: string) => query === 'first'
         ? first
         : Promise.resolve({ items: [], hasMore: false }))
-      mount({ searchSessions })
-      const input = screen.getByPlaceholderText('搜索会话…')
-      fireEvent.change(input, { target: { value: 'first' } })
+      const b = mount({ searchSessions })
+      rerender(b, { searchQuery: 'first' })
       await act(async () => { await vi.advanceTimersByTimeAsync(250) })
 
-      fireEvent.change(input, { target: { value: 'second' } })
+      rerender(b, { searchQuery: 'second' })
       await act(async () => {
         rejectFirst(new Error('stale failure'))
         await Promise.resolve()
@@ -796,55 +669,10 @@ describe('WorkspaceBrowser', () => {
       b.store.actions.setGroupBy('flat')
       rerender(b, {})
       expect(screen.getByText('暂无会话')).toBeTruthy()
-      fireEvent.change(screen.getByPlaceholderText('搜索会话…'), { target: { value: 'x' } })
+      rerender(b, { searchQuery: 'x' })
       expect(screen.getByText('正在搜索会话历史…')).toBeTruthy()
       await act(async () => { await vi.advanceTimersByTimeAsync(250) })
       expect(screen.getByText('无匹配会话')).toBeTruthy()
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('rail state renders icon controls that request expansion', () => {
-    vi.useFakeTimers()
-    try {
-      const expandSidebar = vi.fn()
-      const b = mount({ wide: false, expandSidebar })
-      // No wide chrome in rail state.
-      expect(screen.queryByText('工作区')).toBeNull()
-      expect(screen.queryByPlaceholderText('搜索会话…')).toBeNull()
-      fireEvent.click(screen.getByRole('button', { name: '搜索会话' }))
-      expect(expandSidebar).toHaveBeenCalledTimes(1)
-      // The wide flip mounts the input and focuses it after the slide.
-      rerender(b, { wide: true })
-      const input = screen.getByPlaceholderText('搜索会话…')
-      act(() => { vi.advanceTimersByTime(300) })
-      expect(document.activeElement).toBe(input)
-      // Wide search button is decorative (tabIndex -1, no expand call).
-      fireEvent.click(screen.getByRole('button', { name: '搜索会话' }))
-      expect(expandSidebar).toHaveBeenCalledTimes(1)
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('keeps the rail-opened search expanded when the initiating click reaches document', () => {
-    vi.useFakeTimers()
-    try {
-      const b = mount({ wide: false })
-      fireEvent.click(screen.getByRole('button', { name: '搜索会话' }))
-      rerender(b, { wide: true })
-      // In the browser the rail click keeps bubbling to document after the
-      // wide flip mounted the outside-click listener, with the unmounted rail
-      // button as its target — outside searchRoot. It must not dismiss the
-      // search it just opened.
-      fireEvent.click(document.body)
-      expect(screen.getByRole('button', { name: '搜索会话' }).getAttribute('aria-expanded')).toBe('true')
-      act(() => { vi.advanceTimersByTime(300) })
-      expect(document.activeElement).toBe(screen.getByPlaceholderText('搜索会话…'))
-      // The gesture has settled: outside clicks dismiss the search again.
-      fireEvent.click(document.body)
-      expect(screen.getByRole('button', { name: '搜索会话' }).getAttribute('aria-expanded')).toBe('false')
     } finally {
       vi.useRealTimers()
     }
@@ -1271,12 +1099,64 @@ describe('WorkspaceBrowser', () => {
 
   it('search hides drag affordances (rows are not draggable during search)', () => {
     const sessions = sessionState([summary('needle-a', 2, { displayTitle: 'Needle A' })])
-    mount({
+    const b = mount({
       useSessions: hook(sessions),
       useWorkspaces: hook(workspaceState([workspace('alpha', ['needle-a'])])),
     })
-    fireEvent.change(screen.getByPlaceholderText('搜索会话…'), { target: { value: 'needle' } })
+    rerender(b, { searchQuery: 'needle' })
     const row = screen.getByText('Needle A').closest('[role="treeitem"]') as HTMLElement
     expect(row.hasAttribute('draggable')).toBe(false)
+  })
+
+  it('hides pipeline-tagged sessions from the tree, flat list, and search results', async () => {
+    const plain = summary('plain-s', 3, { displayTitle: 'Plain' })
+    const piped = summary('pipe-s', 2, { displayTitle: 'Piped' })
+    const sessions = {
+      ...sessionState([plain, piped]),
+      tagsBySession: { [sid('pipe-s')]: ['pipeline_id', 'state_id'] },
+    }
+    const b = mount({
+      useSessions: hook(sessions),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['plain-s', 'pipe-s'])])),
+    })
+    fireEvent.click(screen.getByText('alpha'))
+    expect(screen.getByText('Plain')).toBeTruthy()
+    expect(screen.queryByText('Piped')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '单列表' }))
+    expect(screen.getByText('Plain')).toBeTruthy()
+    expect(screen.queryByText('Piped')).toBeNull()
+
+    rerender(b, { searchQuery: 'Piped' })
+    expect(screen.queryByText('Piped')).toBeNull()
+  })
+
+  it('filters pipeline-tagged sessions out of Host search results', async () => {
+    vi.useFakeTimers()
+    try {
+      const plain = summary('plain-s', 2, { displayTitle: 'Plain' })
+      const piped = summary('pipe-s', 1, { displayTitle: 'Piped' })
+      const sessions = {
+        ...sessionState([plain, piped]),
+        tagsBySession: { [sid('pipe-s')]: ['pipeline_id'] },
+      }
+      const searchSessions = vi.fn(async () => ({
+        items: [{ sessionId: sid('pipe-s'), snippet: 'pipeline body excerpt' }],
+        hasMore: false,
+      }))
+      const b = mount({
+        useSessions: hook(sessions),
+        useWorkspaces: hook(workspaceState([workspace('alpha', ['plain-s', 'pipe-s'])])),
+        searchSessions,
+      })
+      rerender(b, { searchQuery: 'body' })
+      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
+      expect(searchSessions).toHaveBeenCalledWith('body', expect.any(AbortSignal))
+      expect(screen.queryByText('Piped')).toBeNull()
+      expect(screen.queryByText('pipeline body excerpt')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
