@@ -32,6 +32,17 @@ import {
   workspaceDomainState, workspaceRecord, WorkspaceId as brandWorkspaceId,
   WorkspaceMoveInvalidError, WorkspaceOrderInvalidError, WorkspaceUnknownSessionError,
 } from '@deepseek-ai/dsh-workspace'
+// LMO pipeline seam: value edge for error mapping and the ctx.lmoPipeline merge.
+import { LmoPipelineError } from '@deepseek-ai/dsh-lmo-pipeline'
+import type {
+  LmoJobSummary,
+  LmoPipelineDetail,
+  LmoPipelineSummary,
+  LmoProjectSummary,
+  LmoStateSummary,
+} from '@deepseek-ai/dsh-lmo-pipeline'
+// Session tags: value edge for parsing the domain/changed feed into host frames.
+import { sessionTagRecord } from '@deepseek-ai/dsh-session-tags'
 // Type-only: brings the `ctx.tools` Context merge into this program (viewFor reads presenters).
 import {
   InvalidPresetIdError, PresetExistsError, PresetMountError,
@@ -42,7 +53,9 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type {
   ApiProxy, ConfigurableProviderView, CredentialView, GoalRef, HistoryEntry, HostFrame,
   ModelCatalogFailure, ModelProviderGroup,
-  ModelReasoning, MuxFrame, PromptContentPart, QuestionResponsePayload, SessionListMetadata, SessionProjectionsBlock, SessionSearchItem,
+  ModelReasoning, MuxFrame, PipelineDetailView, PipelineJobView, PipelineProjectView,
+  PipelineStateView, PipelineSummaryView, PromptContentPart, QuestionResponsePayload,
+  SessionListMetadata, SessionProjectionsBlock, SessionSearchItem,
   QueuedInboxItem, SessionSummary, SettingsNamespaceView, SubagentAddress, JobView, ToolEventView,
   WorkspaceId, WorkspaceView,
 } from './api/index.ts'
@@ -1046,6 +1059,69 @@ function changedWorkspaceView(workspaceId: string, value: unknown): WorkspaceVie
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   }
+}
+
+/** Wire projection of one pipeline project row (brands are structurally shared). */
+function pipelineProjectView(project: LmoProjectSummary): PipelineProjectView {
+  return { ...project }
+}
+
+/** Wire projection of one pipeline summary row (brands are structurally shared). */
+function pipelineSummaryView(pipeline: LmoPipelineSummary): PipelineSummaryView {
+  return { ...pipeline }
+}
+
+/** Wire projection of one pipeline state row (brands are structurally shared). */
+function pipelineStateView(state: LmoStateSummary): PipelineStateView {
+  return { ...state }
+}
+
+/** Wire projection of one pipeline job row (brands are structurally shared). */
+function pipelineJobView(job: LmoJobSummary): PipelineJobView {
+  return { ...job }
+}
+
+/** Wire projection of one pipeline detail; child arrays are copied to the wire view. */
+function pipelineDetailView(pipeline: LmoPipelineDetail): PipelineDetailView {
+  return {
+    ...pipeline,
+    states: [...pipeline.states],
+    jobs: [...pipeline.jobs],
+  }
+}
+
+/**
+ * Fold a thrown `LmoPipelineError` into the matching pipeline.* wire error.
+ * Non-pipeline throws return undefined so the caller keeps its own handling.
+ * @param request - the request being answered.
+ * @param error - the thrown value.
+ * @returns the mapped refusal, or undefined for a non-pipeline throw.
+ */
+function pipelineFailure(request: RpcRequest<unknown>, error: unknown): RpcResponse<never> | undefined {
+  if (!(error instanceof LmoPipelineError)) return undefined
+  switch (error.code) {
+    case 'LMO_NOT_FOUND':
+      return err(request, { code: 'pipeline-not-found', message: error.message, details: {} })
+    case 'LMO_UNAUTHORIZED':
+      return err(request, { code: 'pipeline-unauthorized', message: error.message, details: {} })
+    case 'LMO_FORBIDDEN':
+      return err(request, { code: 'pipeline-forbidden', message: error.message, details: {} })
+    default:
+      return err(request, {
+        code: 'pipeline-error',
+        message: error.message,
+        details: { ...error.httpStatus === undefined ? {} : { httpStatus: error.httpStatus } },
+      })
+  }
+}
+
+/** Fold one session-tags storage or validation failure into an internal wire error. */
+function sessionTagsFailure(request: RpcRequest<unknown>, error: unknown): RpcResponse<never> {
+  return err(request, {
+    code: 'internal',
+    message: error instanceof Error ? error.message : String(error),
+    details: {},
+  })
 }
 
 /**
@@ -2566,6 +2642,38 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         agent.cancel({ kind: 'user' }, { keepInbox: true })
         return Promise.resolve(ok(request, { accepted: true as const }))
       },
+
+      tags: {
+        async list(request) {
+          const { sessionId } = request.payload
+          try {
+            const tags = await ctx.sessionTags.list(sessionId)
+            return ok(request, { tags: [...tags] })
+          } catch (error: unknown) {
+            return sessionTagsFailure(request, error)
+          }
+        },
+
+        async set(request) {
+          const { sessionId, tags } = request.payload
+          try {
+            const stored = await ctx.sessionTags.set(sessionId, tags)
+            return ok(request, { tags: [...stored] })
+          } catch (error: unknown) {
+            return sessionTagsFailure(request, error)
+          }
+        },
+
+        async remove(request) {
+          const { sessionId, tags } = request.payload
+          try {
+            const remaining = await ctx.sessionTags.remove(sessionId, tags)
+            return ok(request, { tags: [...remaining] })
+          } catch (error: unknown) {
+            return sessionTagsFailure(request, error)
+          }
+        },
+      },
     },
 
     subagents: {
@@ -2936,6 +3044,102 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           })
         }
         return ok(request, { archivedSessionIds: [...ctx.workspaceRegistry.archivedSessionIds] })
+      },
+    },
+
+    pipeline: {
+      async listProjects(request) {
+        try {
+          const projects = (await ctx.lmoPipeline.listProjects()).map(pipelineProjectView)
+          return ok(request, { projects })
+        } catch (error: unknown) {
+          const failure = pipelineFailure(request, error)
+          if (failure !== undefined) return failure
+          throw error
+        }
+      },
+
+      async listPipelines(request) {
+        const { projectId, running } = request.payload
+        try {
+          const pipelines = (await ctx.lmoPipeline.listPipelines(projectId, running)).map(pipelineSummaryView)
+          return ok(request, { pipelines })
+        } catch (error: unknown) {
+          const failure = pipelineFailure(request, error)
+          if (failure !== undefined) return failure
+          throw error
+        }
+      },
+
+      async get(request) {
+        const { pipelineId } = request.payload
+        try {
+          return ok(request, { pipeline: pipelineDetailView(await ctx.lmoPipeline.getPipeline(pipelineId)) })
+        } catch (error: unknown) {
+          const failure = pipelineFailure(request, error)
+          if (failure !== undefined) return failure
+          throw error
+        }
+      },
+
+      async pushPrd(request) {
+        const { pipelineId, content } = request.payload
+        try {
+          const value = await ctx.lmoPipeline.pushPrd(pipelineId, content)
+          return ok(request, { pipelineId: value.pipelineId, prdVersion: value.prdVersion })
+        } catch (error: unknown) {
+          const failure = pipelineFailure(request, error)
+          if (failure !== undefined) return failure
+          throw error
+        }
+      },
+
+      async approve(request) {
+        const { pipelineId } = request.payload
+        try {
+          const value = await ctx.lmoPipeline.approve(pipelineId)
+          return ok(request, { pipelineId: value.pipelineId, status: value.status })
+        } catch (error: unknown) {
+          const failure = pipelineFailure(request, error)
+          if (failure !== undefined) return failure
+          throw error
+        }
+      },
+
+      async rerun(request) {
+        const { pipelineId } = request.payload
+        try {
+          const value = await ctx.lmoPipeline.rerunPipeline(pipelineId)
+          return ok(request, { pipelineId: value.pipelineId, resetCount: value.resetCount })
+        } catch (error: unknown) {
+          const failure = pipelineFailure(request, error)
+          if (failure !== undefined) return failure
+          throw error
+        }
+      },
+
+      async listStates(request) {
+        const { pipelineId } = request.payload
+        try {
+          const states = (await ctx.lmoPipeline.listStates(pipelineId)).map(pipelineStateView)
+          return ok(request, { states })
+        } catch (error: unknown) {
+          const failure = pipelineFailure(request, error)
+          if (failure !== undefined) return failure
+          throw error
+        }
+      },
+
+      async listJobs(request) {
+        const { stateId } = request.payload
+        try {
+          const jobs = (await ctx.lmoPipeline.listJobs(stateId)).map(pipelineJobView)
+          return ok(request, { jobs })
+        } catch (error: unknown) {
+          const failure = pipelineFailure(request, error)
+          if (failure !== undefined) return failure
+          throw error
+        }
       },
     },
 
@@ -3630,6 +3834,14 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
               type: 'host/workspace-changed',
               workspace: changedWorkspaceView(change.key, change.value),
             }))
+          }),
+          ctx.on('domain/changed', (change) => {
+            if (change.domain !== 'session_tags' || change.table !== 'tags') return
+            const sessionId = change.key as SessionId
+            const tags = change.operation === 'deleted'
+              ? []
+              : sessionTagRecord.parse(change.value).tags
+            queue.push(frame({ type: 'host/session-tags-changed', sessionId, tags }))
           }),
           // Allowlisted host events ride one verbatim wrapper frame each. The
           // allowlist is api-remotes', and `ctx.remote.$on` is the consumer

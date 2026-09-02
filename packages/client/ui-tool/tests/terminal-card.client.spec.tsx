@@ -350,6 +350,7 @@ describe('BashRow terminal card', () => {
     phase: 'ready',
     subagentsByParent: {}, jobsBySession: {},
     currentAddress: undefined,
+    tagsBySession: {},
   })
 
   const rowProps = (block: RunningToolCall | ToolResultNode): BashRowProps => ({
@@ -448,7 +449,7 @@ describe('DetailsPanel Output section', () => {
     const chat = createChatStore().create()
     if (selection !== null) chat.actions.select(selection)
     const sessions = createSnapshotStore<SessionListState>(cwd === undefined
-      ? { ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined }
+      ? { ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined, tagsBySession: {} }
       : {
         ids: [SID],
         byId: { [SID]: { id: SID, displayTitle: 'r', running: false, blank: false, updatedAt: 0, cwd } },
@@ -456,6 +457,7 @@ describe('DetailsPanel Output section', () => {
         phase: 'ready',
         subagentsByParent: {}, jobsBySession: {},
         currentAddress: undefined,
+        tagsBySession: {},
       })
     const workspaces = createSnapshotStore<WorkspaceListState>({
       items: [], archivedSessionIds: [], state: 'idle', phase: 'ready', error: null,
@@ -650,6 +652,7 @@ describe('DetailsPanel Output section', () => {
           {
             ids: [], byId: {}, current: undefined, phase: 'ready',
             subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
+            tagsBySession: {},
           }))}
         useWorkspaces={bindSnapshotSelector(createSnapshotStore<WorkspaceListState>({
           items: [], archivedSessionIds: [], state: 'idle', phase: 'ready', error: null,

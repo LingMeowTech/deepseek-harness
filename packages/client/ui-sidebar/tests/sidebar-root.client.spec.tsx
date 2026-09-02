@@ -26,7 +26,8 @@ const neverHook = (() => { throw new Error('shell must not read global hooks') }
 function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; width?: number } = {}) {
   const startSession = vi.fn()
   const toggleSidebar = vi.fn()
-  let regionOwner: SidebarSectionOwnerProps | undefined
+  let workspaceOwner: SidebarSectionOwnerProps | undefined
+  let pipelineOwner: SidebarSectionOwnerProps | undefined
   let settingsOwner: SidebarSettingsOwnerProps | undefined
   let footerActionOwner: SidebarFooterActionOwnerProps | undefined
   const brandMark = <span data-testid="custom-brand-mark">M</span>
@@ -51,8 +52,12 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
           footerActionOwner = owner
           return <div data-testid="footer-action-seat" data-wide={owner.wide} />
         }
-        regionOwner = owner as SidebarSectionOwnerProps
-        return <div data-testid="region" data-wide={owner.wide} />
+        if (key === 'sidebar.workspaces') {
+          workspaceOwner = owner as SidebarSectionOwnerProps
+          return <div data-testid="workspace-region" data-wide={owner.wide} />
+        }
+        pipelineOwner = owner as SidebarSectionOwnerProps
+        return <div data-testid="pipeline-region" data-wide={owner.wide} />
       }) as SidebarRootComponentProps['renderSlot']}
     />
   )
@@ -60,9 +65,13 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
   return {
     startSession,
     toggleSidebar,
-    regionOwner: () => {
-      if (regionOwner === undefined) throw new Error('region owner not rendered')
-      return regionOwner
+    workspaceOwner: () => {
+      if (workspaceOwner === undefined) throw new Error('workspace region owner not rendered')
+      return workspaceOwner
+    },
+    pipelineOwner: () => {
+      if (pipelineOwner === undefined) throw new Error('pipeline region owner not rendered')
+      return pipelineOwner
     },
     settingsOwner: () => {
       if (settingsOwner === undefined) throw new Error('settings owner not rendered')
@@ -108,14 +117,54 @@ describe('SidebarRoot shell', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
+  it('renders the workspace region before the pipeline zone, both with the owner share', () => {
+    const b = mountShell()
+    const workspace = screen.getByTestId('workspace-region')
+    const pipeline = screen.getByTestId('pipeline-region')
+    // Document order: workspace first, pipeline below it.
+    expect(workspace.compareDocumentPosition(pipeline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(b.workspaceOwner().wide).toBe(true)
+    expect(b.pipelineOwner().wide).toBe(true)
+  })
+
+  it('hands both regions the shared search query and clears it on Escape', () => {
+    const b = mountShell()
+    const input = screen.getByPlaceholderText('Search sessions or pipelines…')
+    fireEvent.change(input, { target: { value: '管线' } })
+    expect(b.workspaceOwner().searchQuery).toBe('管线')
+    expect(b.pipelineOwner().searchQuery).toBe('管线')
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(b.workspaceOwner().searchQuery).toBe('')
+    expect(b.pipelineOwner().searchQuery).toBe('')
+  })
+
+  it('shows the clear button only with a query and clears through it', () => {
+    const b = mountShell()
+    expect(screen.queryByRole('button', { name: 'Clear search' })).toBeNull()
+    const input = screen.getByPlaceholderText('Search sessions or pipelines…')
+    fireEvent.change(input, { target: { value: 'x' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(b.workspaceOwner().searchQuery).toBe('')
+  })
+
+  it('renders the search icon on the rail and expands on click', () => {
+    vi.useFakeTimers()
+    const b = mountShell()
+    b.rerender({ collapsed: true })
+    vi.advanceTimersByTime(200)
+    b.rerender({})
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+    expect(b.toggleSidebar).toHaveBeenCalledOnce()
+  })
+
   it('hands the region its wide flag and clamps expandSidebar to the collapsed state', () => {
     const b = mountShell()
-    expect(b.regionOwner().wide).toBe(true)
+    expect(b.workspaceOwner().wide).toBe(true)
     // The settings seat rides the same wide flag (ui-settings renders the row).
     expect(b.settingsOwner().wide).toBe(true)
     expect(b.footerActionOwner().wide).toBe(true)
     // Expanded: the request is a no-op (no accidental collapse).
-    b.regionOwner().expandSidebar()
+    b.workspaceOwner().expandSidebar()
     expect(b.toggleSidebar).not.toHaveBeenCalled()
   })
 
@@ -124,19 +173,19 @@ describe('SidebarRoot shell', () => {
     const b = mountShell()
     b.rerender({ collapsed: true })
     // Wide content survives the crossfade window, then settles into the rail.
-    expect(b.regionOwner().wide).toBe(true)
+    expect(b.workspaceOwner().wide).toBe(true)
     vi.advanceTimersByTime(200)
     b.rerender({})
-    expect(b.regionOwner().wide).toBe(false)
+    expect(b.workspaceOwner().wide).toBe(false)
     expect(b.footerActionOwner().wide).toBe(false)
-    expect(screen.getByTestId('region')).toBeTruthy()
-    b.regionOwner().expandSidebar()
+    expect(screen.getByTestId('workspace-region')).toBeTruthy()
+    b.workspaceOwner().expandSidebar()
     expect(b.toggleSidebar).toHaveBeenCalledOnce()
   })
 
   it('renders statically collapsed on a cold start (no crossfade classes)', () => {
     const b = mountShell({ collapsed: true })
-    expect(b.regionOwner().wide).toBe(false)
+    expect(b.workspaceOwner().wide).toBe(false)
     expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeTruthy()
   })
 })

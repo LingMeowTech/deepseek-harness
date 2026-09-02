@@ -51,6 +51,8 @@ export interface SessionListSnapshot {
   subagentsByParent: Readonly<Record<SessionId, SubagentCatalogSnapshot>>
   /** Background jobs per session; an absent key is an empty set. */
   jobsBySession: Readonly<Record<SessionId, readonly JobView[]>>
+  /** Durable per-session tags; an absent key is an untagged session. */
+  tagsBySession: Readonly<Record<SessionId, readonly string[]>>
   currentAddress: SubagentAddress | undefined
 }
 
@@ -147,6 +149,14 @@ export class SessionManager {
    * is stored as an absent key, so absence and `[]` are one representation.
    */
   private readonly jobsBySession = new Map<SessionId, readonly JobView[]>()
+  /**
+   * Durable per-session tags, seeded by the cold-start pull and updated
+   * last-wins from `host/session-tags-changed`. Absence means "untagged",
+   * never "unread"; pipeline sessions carry the `pipeline_id` tag.
+   */
+  private readonly tagsBySession = new Map<SessionId, readonly string[]>()
+  /** Reference-stable tags projection (the itemsCache precedent: reused while unchanged). */
+  private tagsSnapshotCache: Readonly<Record<string, readonly string[]>> = {}
 
   private selected: SessionId | undefined
 
@@ -435,6 +445,56 @@ export class SessionManager {
 
   // ---- List API ----
 
+  /**
+   * Replace one session's complete durable tag list. The Host publishes
+   * `host/session-tags-changed` after the commit and that frame alone drives
+   * every surface's refresh — this method writes nothing locally.
+   * @param sessionId - the tagged session.
+   * @param tags - the complete replacement list, in display order.
+   * @throws when the Host rejects the write.
+   */
+  async setSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void> {
+    const { result } = await this.api.sessions.tags.set({ sessionId, tags: [...tags] })
+    if (!result.ok) {
+      throw new Error(`session.tags.set failed: ${result.error.code}: ${result.error.message}`)
+    }
+  }
+
+  /**
+   * Remove named durable tags from one session; like
+   * {@link setSessionTags}, the Host's changed frame is the only refresh path.
+   * @param sessionId - the tagged session.
+   * @param tags - tag names to remove.
+   * @throws when the Host rejects the write.
+   */
+  async removeSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void> {
+    const { result } = await this.api.sessions.tags.remove({ sessionId, tags: [...tags] })
+    if (!result.ok) {
+      throw new Error(`session.tags.remove failed: ${result.error.code}: ${result.error.message}`)
+    }
+  }
+
+  /**
+   * Cold-start tag pull: one `session.tags.list` per listed session. A
+   * failed read leaves the row untagged until the next changed frame — tags
+   * are auxiliary to the session list and never fatal to it. A row removed
+   * while a pull is in flight drops the stale response.
+   * @param sessionIds - currently listed sessions.
+   */
+  private refreshTags(sessionIds: readonly SessionId[]): void {
+    for (const sessionId of sessionIds) {
+      this.api.sessions.tags.list({ sessionId }).then(({ result }) => {
+        if (!result.ok) return
+        if (!this.summaries.some(summary => summary.sessionId === sessionId)) return
+        this.tagsBySession.set(sessionId, result.value.tags)
+        this.notifier.markDirty()
+      }).catch(() => {
+        // Named swallow: a transient tag read fails open (row shows untagged),
+        // and the next list refresh or changed frame converges it.
+      })
+    }
+  }
+
   /** Full refresh via session.list (single-flight: an in-flight call is reused). */
   refreshList(): Promise<void> {
     if (this.listInflight !== null) return this.listInflight
@@ -494,6 +554,9 @@ export class SessionManager {
             const values = block.values as Record<string, unknown>
             for (const key of Object.keys(values)) store.apply(key, values[key], block.asOfSeq)
           }
+          // Tags have no list baseline; re-pull per session after every list
+          // refresh and let the changed frame take over between pulls.
+          this.refreshTags(this.summaries.map(summary => summary.sessionId))
         } else {
           this.listState = 'error'
           this.listError = result.error
@@ -637,8 +700,14 @@ export class SessionManager {
 
   /** Apply immediately and retain for replay when a list response is in flight. */
   private recordMutation(mutation: SessionListMutation): void {
+    const sessionId = mutation.kind === 'upsert' ? mutation.summary.sessionId : undefined
+    const existed = sessionId !== undefined && this.summaries.some(s => s.sessionId === sessionId)
     this.listMutations?.push(mutation)
     this.summaries = applyMutation(this.summaries, mutation)
+    // A newly observed session has no tag baseline yet; pull its durable tags
+    // immediately so pipeline-session filtering does not wait for a later
+    // list refresh or a click into the row.
+    if (sessionId !== undefined && !existed) this.refreshTags([sessionId])
     // Eager edge reconciliation — a snapshot-build-time pass would miss consecutive status frames.
     this.syncCompletedNotifications()
     this.notifier.markDirty()
@@ -846,6 +915,7 @@ export class SessionManager {
         // no relative order. Clearing here makes a detached Activation's rows
         // disappear whichever arrives first.
         this.jobsBySession.delete(frame.sessionId)
+        this.tagsBySession.delete(frame.sessionId)
         if (!durableSubagent) this.projectionStores.delete(frame.sessionId)
         // A pull already in flight was requested before this removal and can
         // carry the pre-removal parentAvailable:true, which would resurrect
@@ -876,6 +946,11 @@ export class SessionManager {
         this.recordMutation({ kind: 'status', sessionId: frame.sessionId, running: frame.running })
         this.sessions.get(frame.sessionId)?.handleRunning(frame.running)
         this.updateCatalogActivity(frame.sessionId, frame.running)
+        return
+      }
+      case 'host/session-tags-changed': {
+        this.tagsBySession.set(frame.sessionId, frame.tags)
+        this.notifier.markDirty()
         return
       }
       case 'host/agent-error': {
@@ -1083,8 +1158,28 @@ export class SessionManager {
       error: this.listError,
       subagentsByParent: Object.fromEntries(this.catalogs),
       jobsBySession: Object.fromEntries(this.jobsBySession),
+      tagsBySession: this.tagsSnapshot(),
       currentAddress: current === undefined ? undefined : this.addresses.get(current),
     }
+  }
+
+  /**
+   * Reference-stable tags projection: the previous object is reused while the
+   * map is unchanged, so consumers selecting `tagsBySession` do not re-render
+   * on unrelated list activity.
+   */
+  private tagsSnapshot(): Readonly<Record<string, readonly string[]>> {
+    if (this.tagsBySession.size !== Object.keys(this.tagsSnapshotCache).length) {
+      this.tagsSnapshotCache = Object.fromEntries(this.tagsBySession)
+      return this.tagsSnapshotCache
+    }
+    for (const [key, value] of this.tagsBySession) {
+      if (this.tagsSnapshotCache[key] !== value) {
+        this.tagsSnapshotCache = Object.fromEntries(this.tagsBySession)
+        return this.tagsSnapshotCache
+      }
+    }
+    return this.tagsSnapshotCache
   }
 }
 

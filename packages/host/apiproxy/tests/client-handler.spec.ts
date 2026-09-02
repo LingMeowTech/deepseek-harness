@@ -21,6 +21,8 @@ function scriptedApi(overrides: {
   sessions?: Partial<ApiProxy['sessions']>
   subagents?: Partial<ApiProxy['subagents']>
   host?: Partial<ApiProxy['host']>
+  workspace?: Partial<ApiProxy['workspace']>
+  pipeline?: Partial<ApiProxy['pipeline']>
   skills?: Partial<ApiProxy['skills']>
   agentPresets?: Partial<ApiProxy['agentPresets']>
   events?: Partial<ApiProxy['events']>
@@ -61,6 +63,11 @@ function scriptedApi(overrides: {
       }),
       updateQueue: r => ok(r, { accepted: true as const }),
       cancel: r => ok(r, { accepted: true as const }),
+      tags: {
+        list: r => ok(r, { tags: [] }),
+        set: r => ok(r, { tags: r.payload.tags }),
+        remove: r => ok(r, { tags: [] }),
+      },
       ...overrides.sessions,
     },
     subagents: {
@@ -90,6 +97,23 @@ function scriptedApi(overrides: {
       insertBefore: r => ok(r, { workspaceIds: [r.payload.workspaceId] }),
       insertSessionBefore: r => ok(r, { workspace: { workspaceId: 'w1' as never, path: '/t', title: 't', sessionIds: [], createdAt: '0', updatedAt: '0' } }),
       archiveSession: r => ok(r, { archivedSessionIds: [r.payload.sessionId] }),
+      ...overrides.workspace,
+    },
+    pipeline: {
+      listProjects: r => ok(r, { projects: [] }),
+      listPipelines: r => ok(r, { pipelines: [] }),
+      get: r => ok(r, {
+        pipeline: {
+          pipelineId: r.payload.pipelineId, projectId: 'p' as never, name: 'pipeline', status: 0,
+          isLooping: false, prd: { version: 'v0', content: '' }, states: [], jobs: [],
+        },
+      }),
+      pushPrd: r => ok(r, { pipelineId: r.payload.pipelineId, prdVersion: 'v1' }),
+      approve: r => ok(r, { pipelineId: r.payload.pipelineId, status: 2 }),
+      rerun: r => ok(r, { pipelineId: r.payload.pipelineId, resetCount: 0 }),
+      listStates: r => ok(r, { states: [] }),
+      listJobs: r => ok(r, { jobs: [] }),
+      ...overrides.pipeline,
     },
     skills: { list: r => ok(r, { skills: [] }), ...overrides.skills },
     agentPresets: {

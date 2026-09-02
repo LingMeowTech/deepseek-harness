@@ -29,6 +29,7 @@ function hook<T>(snapshot: T) {
 }
 const sessions: SessionListState = {
   ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
+  tagsBySession: {},
 }
 const workspaceState = (items: readonly WorkspaceView[]): WorkspaceListState => ({
   items, archivedSessionIds: [], state: 'idle', phase: 'ready', error: null, baselinesReady: true,

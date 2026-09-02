@@ -2600,6 +2600,11 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         }
         return ok(request, { accepted: true as const })
       },
+      tags: {
+        list: request => ok(request, { tags: [] }),
+        set: request => ok(request, { tags: request.payload.tags }),
+        remove: request => ok(request, { tags: [] }),
+      },
     },
     subagents: {
       list: request => ok(request, { entries: [], parentAvailable: true }),
@@ -2790,6 +2795,24 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         }
         return ok(request, { archivedSessionIds: [...archivedSessionIds] })
       },
+    },
+    pipeline: {
+      listProjects: request => ok(request, { projects: [] }),
+      listPipelines: request => ok(request, { pipelines: [] }),
+      get: (request) => {
+        const { pipelineId } = request.payload
+        return ok(request, {
+          pipeline: {
+            pipelineId, projectId: 'fx-proj' as never, name: 'fixture-pipeline', status: 1,
+            isLooping: false, prd: { version: 'v1', content: '' }, states: [], jobs: [],
+          },
+        })
+      },
+      pushPrd: request => ok(request, { pipelineId: request.payload.pipelineId, prdVersion: 'v1' }),
+      approve: request => ok(request, { pipelineId: request.payload.pipelineId, status: 2 }),
+      rerun: request => ok(request, { pipelineId: request.payload.pipelineId, resetCount: 0 }),
+      listStates: request => ok(request, { states: [] }),
+      listJobs: request => ok(request, { jobs: [] }),
     },
     agentPresets: {
       // Both trusts appear, because a surface must present a locally authored
@@ -3189,6 +3212,9 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'session.attachment': return this.api.sessions.attachment(request)
       case 'session.updateQueue': return this.api.sessions.updateQueue(request)
       case 'session.cancel': return this.api.sessions.cancel(request)
+      case 'session.tags.list': return this.api.sessions.tags.list(request)
+      case 'session.tags.set': return this.api.sessions.tags.set(request)
+      case 'session.tags.remove': return this.api.sessions.tags.remove(request)
       case 'subagent.list': return this.api.subagents.list(request)
       case 'subagent.history': return this.api.subagents.history(request)
       case 'subagent.prompt': return this.api.subagents.prompt(request, signal)
@@ -3207,6 +3233,14 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'workspace.insertBefore': return this.api.workspace.insertBefore(request)
       case 'workspace.insertSessionBefore': return this.api.workspace.insertSessionBefore(request)
       case 'workspace.archiveSession': return this.api.workspace.archiveSession(request)
+      case 'pipeline.listProjects': return this.api.pipeline.listProjects(request)
+      case 'pipeline.listPipelines': return this.api.pipeline.listPipelines(request)
+      case 'pipeline.get': return this.api.pipeline.get(request)
+      case 'pipeline.pushPrd': return this.api.pipeline.pushPrd(request)
+      case 'pipeline.approve': return this.api.pipeline.approve(request)
+      case 'pipeline.rerun': return this.api.pipeline.rerun(request)
+      case 'pipeline.listStates': return this.api.pipeline.listStates(request)
+      case 'pipeline.listJobs': return this.api.pipeline.listJobs(request)
       case 'skill.list': return this.api.skills.list(request)
       case 'agentPreset.list': return this.api.agentPresets.list(request)
       case 'agentPreset.select': return this.api.agentPresets.select(request)

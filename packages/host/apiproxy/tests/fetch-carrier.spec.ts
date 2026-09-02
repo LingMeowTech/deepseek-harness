@@ -108,6 +108,17 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
       async cancel(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { accepted: true as const } } }
       },
+      tags: {
+        async list(request) {
+          return { rpcId: request.rpcId, result: { ok: true, value: { tags: [] } } }
+        },
+        async set(request) {
+          return { rpcId: request.rpcId, result: { ok: true, value: { tags: request.payload.tags } } }
+        },
+        async remove(request) {
+          return { rpcId: request.rpcId, result: { ok: true, value: { tags: [] } } }
+        },
+      },
     },
     subagents: {
       async list(request) {
@@ -196,6 +207,43 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
       },
       async archiveSession(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { archivedSessionIds: [request.payload.sessionId] } } }
+      },
+    },
+    pipeline: {
+      async listProjects(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { projects: [] } } }
+      },
+      async listPipelines(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { pipelines: [] } } }
+      },
+      async get(request) {
+        return {
+          rpcId: request.rpcId,
+          result: {
+            ok: true,
+            value: {
+              pipeline: {
+                pipelineId: request.payload.pipelineId, projectId: 'p' as never, name: 'pipeline', status: 0,
+                isLooping: false, prd: { version: 'v0', content: '' }, states: [], jobs: [],
+              },
+            },
+          },
+        }
+      },
+      async pushPrd(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { pipelineId: request.payload.pipelineId, prdVersion: 'v1' } } }
+      },
+      async approve(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { pipelineId: request.payload.pipelineId, status: 2 } } }
+      },
+      async rerun(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { pipelineId: request.payload.pipelineId, resetCount: 0 } } }
+      },
+      async listStates(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { states: [] } } }
+      },
+      async listJobs(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { jobs: [] } } }
       },
     },
     agentPresets: {

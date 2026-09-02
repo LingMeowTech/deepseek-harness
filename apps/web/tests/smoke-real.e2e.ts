@@ -29,6 +29,17 @@ import { REPO_ROOT, connectFreshWorkspace, newEnglishPage, probeFreePort, requir
 
 const WEB_SURFACE_PROMPT = fileURLToPath(new URL('./snapshots/web-runtime-context/web-surface-prompt.expected.md', import.meta.url))
 
+/**
+ * Inert lmo-server credentials for the shipped web bundle's pipeline provider
+ * row: the composition fails loud without them, and no smoke drives pipeline
+ * RPCs, so a dead loopback origin keeps the boot honest without a real server.
+ */
+const LMO_PIPELINE_CREDENTIALS = {
+  LMO_SERVER_HOST: 'http://127.0.0.1:1',
+  LMO_SERVER_SECRET_ID: 'web-smoke-inert',
+  LMO_SERVER_SECRET_KEY: '0'.repeat(64),
+}
+
 function waitForReadyLine(child: ChildProcess): Promise<string> {
   return new Promise((resolveReady, reject) => {
     let out = ''
@@ -165,6 +176,7 @@ describe('dsh web keyless CLI smoke', () => {
         cwd: sessionsDir,
         env: {
           ...process.env,
+          ...LMO_PIPELINE_CREDENTIALS,
           DEEPSEEK_API_KEY: 'keyless-web-no-call',
           DSH_HOME: join(sessionsDir, '.dsh'),
           DSH_AGENTS_HOME: join(sessionsDir, '.agents'),
@@ -231,6 +243,7 @@ describe('dsh web keyless CLI smoke', () => {
         cwd: workspace,
         env: {
           ...process.env,
+          ...LMO_PIPELINE_CREDENTIALS,
           DEEPSEEK_API_KEY: 'keyless-web-workspace',
           DEEPSEEK_BASE_URL: `http://127.0.0.1:${address.port}`,
           DSH_HOME: join(workspace, '.dsh'),
@@ -344,6 +357,7 @@ describe('dsh web keyless CLI smoke', () => {
         cwd: workspace,
         env: {
           ...process.env,
+          ...LMO_PIPELINE_CREDENTIALS,
           DEEPSEEK_API_KEY: 'keyless-web-retry',
           DEEPSEEK_BASE_URL: `http://127.0.0.1:${address.port}`,
           DSH_HOME: join(workspace, '.dsh'),
@@ -426,6 +440,7 @@ describe('dsh web keyless CLI smoke', () => {
         cwd: workspace,
         env: {
           ...process.env,
+          ...LMO_PIPELINE_CREDENTIALS,
           DEEPSEEK_API_KEY: 'keyless-web-code-mode',
           DEEPSEEK_BASE_URL: `http://127.0.0.1:${address.port}`,
           DSH_TOOLS_MODE: 'code',
@@ -498,6 +513,7 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY || notReady.length > 0)('web smoke
         cwd: sessionsDir,
         env: {
           ...process.env,
+          ...LMO_PIPELINE_CREDENTIALS,
           DSH_HOME: join(sessionsDir, '.dsh'),
           DSH_AGENTS_HOME: join(sessionsDir, '.agents'),
           TSX_TSCONFIG_PATH: join(REPO_ROOT, 'tsconfig.json'),

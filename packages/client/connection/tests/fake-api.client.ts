@@ -122,6 +122,11 @@ export class FakeApiClient implements IApiClient {
     attachment: (payload: unknown) => this.record('session.attachment', payload, this.onAttachment(payload)),
     updateQueue: (payload: unknown) => this.record('session.updateQueue', payload, this.onUpdateQueue(payload)),
     cancel: (payload: unknown) => this.record('session.cancel', payload, this.onCancel(payload)),
+    tags: {
+      list: (payload: unknown) => this.record('session.tags.list', payload, Promise.resolve(ok({ tags: [] }))),
+      set: (payload: unknown) => this.record('session.tags.set', payload, Promise.resolve(ok({ tags: (payload as { tags: string[] }).tags }))),
+      remove: (payload: unknown) => this.record('session.tags.remove', payload, Promise.resolve(ok({ tags: [] }))),
+    },
   }
 
   readonly subagents: IApiClient['subagents'] = {
@@ -169,6 +174,29 @@ export class FakeApiClient implements IApiClient {
       archivedSessionIds: [(payload as { sessionId: SessionId }).sessionId],
     }))),
   }
+
+  readonly pipeline = {
+    listProjects: (payload: unknown) => this.record('pipeline.listProjects', payload, Promise.resolve(ok({ projects: [] }))),
+    listPipelines: (payload: unknown) => this.record('pipeline.listPipelines', payload, Promise.resolve(ok({ pipelines: [] }))),
+    get: (payload: unknown) => this.record('pipeline.get', payload, Promise.resolve(ok({
+      pipeline: {
+        pipelineId: (payload as { pipelineId: string }).pipelineId,
+        projectId: 'fk-proj' as never, name: 'fixture-pipeline', status: 1,
+        isLooping: false, prd: { version: 'v1', content: '' }, states: [], jobs: [],
+      },
+    }))),
+    pushPrd: (payload: unknown) => this.record('pipeline.pushPrd', payload, Promise.resolve(ok({
+      pipelineId: (payload as { pipelineId: string }).pipelineId, prdVersion: 'v1',
+    }))),
+    approve: (payload: unknown) => this.record('pipeline.approve', payload, Promise.resolve(ok({
+      pipelineId: (payload as { pipelineId: string }).pipelineId, status: 2,
+    }))),
+    rerun: (payload: unknown) => this.record('pipeline.rerun', payload, Promise.resolve(ok({
+      pipelineId: (payload as { pipelineId: string }).pipelineId, resetCount: 0,
+    }))),
+    listStates: (payload: unknown) => this.record('pipeline.listStates', payload, Promise.resolve(ok({ states: [] }))),
+    listJobs: (payload: unknown) => this.record('pipeline.listJobs', payload, Promise.resolve(ok({ jobs: [] }))),
+  } as unknown as IApiClient['pipeline']
 
   // Payloads stay `unknown` (lint-lane note above); response rows are the real
   // wire shapes so cases can program catalogs and skill lists without casts.

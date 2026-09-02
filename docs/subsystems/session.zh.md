@@ -756,6 +756,43 @@ Types: [CreateSessionOptions](persistence.zh.md) · [PrepareSessionOptions](pers
 
 Source: [`packages/core/session/src/index.ts`](../../packages/core/session/src/index.ts)
 
+<a id="ctxsessiontags--sessiontagregistry"></a>
+
+### `ctx.sessionTags` — `SessionTagRegistry`
+
+Durable session tag registry. Set writes the complete tag list for a session; remove deletes the named tags and drops the row when none remain.
+
+```ts cordis-catalog
+/**
+ * Read one session's durable tag list.
+ * @param sessionId - the tagged session.
+ * @returns the tags in stored order; empty for an untagged session.
+ */
+list(sessionId: SessionId): Promise<readonly string[]>
+
+/**
+ * Replace one session's complete tag list. The normalized list is written
+ * durably before the `domain/changed` notification publishes.
+ * @param sessionId - the tagged session.
+ * @param tags - new complete tag list; empty deletes the tag row.
+ * @returns the stored normalized tags.
+ */
+async set(sessionId: SessionId, tags: readonly string[]): Promise<readonly string[]>
+
+/**
+ * Remove named tags from one session, keeping the remaining order. Removing
+ * the last tag deletes the row; absent sessions are idempotent no-ops.
+ * @param sessionId - the tagged session.
+ * @param tags - tags to remove.
+ * @returns the remaining stored tags.
+ */
+async remove(sessionId: SessionId, tags: readonly string[]): Promise<readonly string[]>
+```
+
+Types: [SessionId](core.zh.md)
+
+Source: [`packages/session/session-tags/src/index.ts:59`](../../packages/session/session-tags/src/index.ts)
+
 <a id="session-events"></a>
 
 ### `session/*` events

@@ -4,7 +4,8 @@ import type {
 } from '@deepseek-ai/dsh-client-runtime/client'
 import {
   deriveFlat, deriveGroups, deriveSearchResults, workspaceLabel, relativeTime,
-  UNGROUPED_KEY, UNGROUPED_LABEL,
+  PIPELINE_SESSION_TAG, UNGROUPED_KEY, UNGROUPED_LABEL,
+  withoutPipelineSessions, workspaceSearchTerm,
 } from '../src/client/tree.ts'
 import { createWorkspaceViewStore } from '../src/client/stores.ts'
 
@@ -19,6 +20,7 @@ const list = (...items: SessionSummary[]): SessionListState => ({
   byId: Object.fromEntries(items.map(item => [item.id, item])),
   current: undefined,
   phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
+  tagsBySession: {},
 })
 const workspace = (id: string, sessionIds: string[], title = id): WorkspaceView => ({
   workspaceId: wid(id), path: `/projects/${id}`, title,
@@ -446,5 +448,54 @@ describe('relativeTime', () => {
     expect(relativeTime(now - 2 * 86_400_000, now)).toEqual({ unit: 'days', n: 2 })
     expect(relativeTime(now - 60 * 86_400_000, now)).toEqual({ unit: 'months', n: 2 })
     expect(relativeTime(0, now)).toEqual({ unit: 'years', n: 1 })
+  })
+})
+
+describe('withoutPipelineSessions', () => {
+  it('names the client-side mirror of the host PIPELINE_SESSION_TAGS first member', () => {
+    expect(PIPELINE_SESSION_TAG).toBe('pipeline_id')
+  })
+
+  it('returns the same reference when no session carries the pipeline tag', () => {
+    const sessions = list(summary('plain', 1))
+    expect(withoutPipelineSessions(sessions)).toBe(sessions)
+  })
+
+  it('drops pipeline-tagged ids and summaries while keeping tags intact', () => {
+    const kept = summary('kept', 1)
+    const piped = summary('piped', 2)
+    const loose = summary('loose', 3)
+    const sessions = {
+      ...list(kept, piped, loose),
+      tagsBySession: { [sid('piped')]: ['pipeline_id', 'state_id'], [sid('kept')]: ['other'] },
+    }
+    const filtered = withoutPipelineSessions(sessions)
+    expect(filtered.ids).toEqual([sid('kept'), sid('loose')])
+    expect(filtered.byId[sid('piped')]).toBeUndefined()
+    expect(filtered.byId[sid('kept')]).toBe(kept)
+    expect(filtered.tagsBySession).toBe(sessions.tagsBySession)
+  })
+})
+
+describe('workspaceSearchTerm', () => {
+  it('returns null for blank input', () => {
+    expect(workspaceSearchTerm('')).toBeNull()
+    expect(workspaceSearchTerm('   ')).toBeNull()
+  })
+
+  it('extracts the workspace: stem case-insensitively', () => {
+    expect(workspaceSearchTerm('workspace:foo')).toBe('foo')
+    expect(workspaceSearchTerm('WORKSPACE:  foo  ')).toBe('foo')
+    expect(workspaceSearchTerm('workspace:')).toBeNull()
+    expect(workspaceSearchTerm('workspace:   ')).toBeNull()
+  })
+
+  it('returns null for pipeline-scoped queries', () => {
+    expect(workspaceSearchTerm('pipeline:foo')).toBeNull()
+    expect(workspaceSearchTerm('PIPELINE:foo')).toBeNull()
+  })
+
+  it('returns the trimmed query for prefix-less input', () => {
+    expect(workspaceSearchTerm('  hello world  ')).toBe('hello world')
   })
 })

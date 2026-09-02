@@ -93,6 +93,12 @@
       "path": "../../workspace/workspace"
     },
     {
+      "path": "../../pipeline/lmo-pipeline"
+    },
+    {
+      "path": "../../session/session-tags"
+    },
+    {
       "path": "../directory-picker"
     },
     {

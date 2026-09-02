@@ -38,6 +38,8 @@ function subagentParentOf(carrier: Scoped<SubagentRuntime>): Agent {
 export interface HarnessSdkJsonRpcServerOptions {
   /** Report max-token termination as an accepted result instead of an infrastructure error. */
   maxTokensAsSuccess?: boolean
+  /** Agent preset id SDK-created sessions are composed from, like normal web sessions. */
+  agentPreset?: string
 }
 
 function successStatus(reason: string, options: HarnessSdkJsonRpcServerOptions): 'ok' | 'error' {
@@ -216,18 +218,36 @@ export class HarnessSdkJsonRpcServer {
   }
 
   private async createSession(sessionId: string): Promise<SessionRecord> {
-    // No preset composition: this server's compositions keep the model-facing
-    // rows in the host plane, so this agent reads them from the global layer. A
-    // deployment that configures a roster has to join one here first
-    // (@deepseek-ai/dsh-agent-presets README, "Composing a child agent").
+    // Compose the deployment's agent preset when one is configured, matching
+    // the normal web session creation flow. Without a roster the requested id
+    // is still recorded so the browser can label the session; a later roster
+    // mount adopts it on resume.
+    const agentPreset = this.options.agentPreset
+    const presets = agentPreset === undefined ? undefined : this.ctx.get('agentPresets') as {
+      resolve(presetId: string): Promise<{ id: string }>
+      mount(ctx: unknown, presetId: string): Promise<void>
+    } | undefined
+    let resolvedPreset: string | undefined
+    let setup: ((agentCtx: unknown) => Promise<void>) | undefined
+    if (agentPreset !== undefined && presets !== undefined) {
+      const resolved = await presets.resolve(agentPreset)
+      resolvedPreset = resolved.id
+      setup = async (agentCtx) => { await presets.mount(agentCtx, resolved.id) }
+    } else if (agentPreset !== undefined) {
+      resolvedPreset = agentPreset
+    }
     const handle = await this.ctx.agents.create({
       sessionId: SessionId(sessionId),
-      meta: { cwd: this.cwd },
+      meta: {
+        cwd: this.cwd,
+        ...(resolvedPreset === undefined ? {} : { agentPreset: resolvedPreset }),
+      },
       agentOptions: {
         provider: this.provider,
         model: this.model,
         ...this.maxTokens === undefined ? {} : { maxTokens: this.maxTokens },
       },
+      ...(setup === undefined ? {} : { setup }),
     })
     const rec: SessionRecord = { handle }
     this.sessions.set(sessionId, rec)

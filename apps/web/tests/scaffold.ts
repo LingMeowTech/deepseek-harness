@@ -511,6 +511,11 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
           baseURL: options.deepSeekSearch.baseURL,
         },
       }],
+    // The shipped web bundle's lmo-pipeline-http row would fail loud without a
+    // baseUrl/secret (its documented contract). No web e2e scenario drives the
+    // pipeline RPCs, so pin inert loopback credentials to keep the boot honest
+    // instead of disabling the row and hiding a wiring regression.
+    { id: 'lmo-pipeline', config: { baseUrl: 'http://127.0.0.1:1', secretId: 'web-e2e-scaffold', secretKey: '0'.repeat(64) } },
     ...mode === 'record' || options.deepSeekMissingCredential === true
       ? []
       : [{ id: 'llm-deepseek', disabled: true }],
@@ -766,13 +771,18 @@ export function fixtureUserPrompts(fixtureText: string): string[] {
  * @returns the realized fixture text.
  */
 export function realizeSeedFixture(scaffold: WebScaffold, fixtureText: string, id: string): string {
+  // The {{cwd}} placeholder sits inside JSON string values, so a Windows
+  // workspace path needs its backslashes escaped before the header parses;
+  // the parse-verified raw value below still drives the textual sweep.
+  const escapedWorkspaceCwd = scaffold.workspaceCwd.replaceAll('\\', '\\\\')
   const realized = fixtureText
     .split('{{sessionId}}').join(id)
-    .split('{{cwd}}').join(scaffold.workspaceCwd)
+    .split('{{cwd}}').join(escapedWorkspaceCwd)
   const fixtureCwd = (JSON.parse(realized.split('\n', 1)[0]!) as { cwd?: string }).cwd
-  return fixtureCwd === undefined
-    ? realized
-    : realized.split(fixtureCwd).join(scaffold.workspaceCwd)
+  if (fixtureCwd === undefined) return realized
+  // The sweep replaces the RAW recorded cwd wherever the text carries it
+  // (non-header JSON values); {{cwd}} occurrences were already escaped above.
+  return realized.split(fixtureCwd).join(escapedWorkspaceCwd)
 }
 
 /**
@@ -895,7 +905,9 @@ async function persistSeedSession(
 function normalizeAria(snapshot: string, workspaceCwd: string): string {
   // The session heading renders the workspace's basename, not the full
   // path, so both spellings must collapse to the token.
-  const base = workspaceCwd.split('/').pop()!
+  // Windows workspace paths separate with backslashes; split on both so the
+  // basename token collapses on every host, not just POSIX paths.
+  const base = workspaceCwd.split(/[\\/]/).pop()!
   return snapshot
     .split(workspaceCwd).join('{{cwd}}')
     .split(base).join('{{workspace}}')

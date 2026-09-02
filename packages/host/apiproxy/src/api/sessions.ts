@@ -390,4 +390,24 @@ export interface SessionsApi {
    */
   cancel(request: RpcRequest<{ sessionId: SessionId }>): Promise<RpcResponse<{ accepted: true }>>
 
+  /** Durable per-session tags; every write publishes `host/session-tags-changed`. */
+  tags: {
+    /** Reads one session's stored tags in insertion order. */
+    list(request: RpcRequest<{ sessionId: SessionId }>):
+    Promise<RpcResponse<{ tags: string[] }>>
+
+    /**
+     * Replaces one session's complete tag list. Pipeline sessions are
+     * identified by `pipeline_id` / `state_id` / `job_id` / `node_id`.
+     */
+    set(request: RpcRequest<{ sessionId: SessionId; tags: string[] }>):
+    Promise<RpcResponse<{ tags: string[] }>>
+
+    /**
+     * Removes named tags from one session; removing the last tag clears the
+     * session's tag row.
+     */
+    remove(request: RpcRequest<{ sessionId: SessionId; tags: string[] }>):
+    Promise<RpcResponse<{ tags: string[] }>>
+  }
 }

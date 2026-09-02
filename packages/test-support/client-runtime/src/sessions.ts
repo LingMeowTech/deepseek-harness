@@ -185,7 +185,7 @@ export class TestSessions implements ISessions {
   /** Calls observed on the service-level face, newest last. */
   readonly calls: {
     method: 'open' | 'openSubagent' | 'setSubagentCatalogOpen' | 'refreshSubagents'
-      | 'clear' | 'search' | 'fork'
+      | 'clear' | 'search' | 'fork' | 'setSessionTags' | 'removeSessionTags'
     args: unknown[]
   }[] = []
 
@@ -203,6 +203,7 @@ export class TestSessions implements ISessions {
     this.list = createSnapshotStore<SessionListState>({
       ids: [], byId: {}, current: undefined, phase: 'ready',
       subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
+      tagsBySession: {},
     })
     this.channel = new SessionProvideChannel({
       rebuildBundles: () => {
@@ -280,6 +281,36 @@ export class TestSessions implements ISessions {
     record.summary = { ...record.summary, ...patch }
     await this.stabilize(() => {
       this.list.update((draft) => { draft.byId[id as SessionId] = record.summary })
+    })
+  }
+
+  /**
+   * Replace one session's durable tag list. The double mirrors the production
+   * refresh path: the store write stands in for the Host's
+   * `host/session-tags-changed` frame (production never updates locally).
+   * @param sessionId - the tagged session.
+   * @param tags - the complete replacement list.
+   */
+  async setSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void> {
+    this.calls.push({ method: 'setSessionTags', args: [sessionId, tags] })
+    await this.stabilize(() => {
+      this.list.update((draft) => { draft.tagsBySession = { ...draft.tagsBySession, [sessionId]: tags } })
+    })
+  }
+
+  /**
+   * Remove named durable tags from one session (frame stand-in, see
+   * {@link TestSessions.setSessionTags}).
+   * @param sessionId - the tagged session.
+   * @param tags - tag names to remove.
+   */
+  async removeSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void> {
+    this.calls.push({ method: 'removeSessionTags', args: [sessionId, tags] })
+    const removing = new Set(tags)
+    const current = this.list.getSnapshot().tagsBySession[sessionId]
+    const next = (current ?? []).filter(tag => !removing.has(tag))
+    await this.stabilize(() => {
+      this.list.update((draft) => { draft.tagsBySession = { ...draft.tagsBySession, [sessionId]: next } })
     })
   }
 

@@ -73,6 +73,19 @@
     - id: workspace
       name: '@deepseek-ai/dsh-workspace'
 
+    # Durable per-session tags (pipeline_id/state_id/job_id/node_id) for the
+    # pipeline zone and its session filtering.
+    - id: session-tags
+      name: '@deepseek-ai/dsh-session-tags'
+
+    # LMO pipeline seam: the HTTP provider registers ctx.lmoPipeline for both
+    # the host pipeline.* RPC surface and the model-facing pipeline_* tools.
+    - id: lmo-pipeline
+      name: '@deepseek-ai/dsh-lmo-pipeline-http'
+
+    - id: tool-lmo-pipeline
+      name: '@deepseek-ai/dsh-tool-lmo-pipeline'
+
     - id: session-projection-cache
       name: '@deepseek-ai/dsh-session-projection-cache'
       config:
@@ -236,6 +249,12 @@
 
     - id: ui-workspace
       name: '@deepseek-ai/dsh-client-ui-workspace'
+
+    # Pipeline zone: the sidebar `sidebar.pipelines` region (project → pipeline
+    # → state → job) over the ctx.pipelines service; pipeline sessions and tag
+    # editing ride the host session-tags frame.
+    - id: ui-lmo-pipeline
+      name: '@deepseek-ai/dsh-client-ui-lmo-pipeline'
 
     # Input triggers: the '/' | '@' pipeline (ui-input-trigger), the command surface over
     # it (ui-commands), and the reference sources (ui-skill / ui-reference).

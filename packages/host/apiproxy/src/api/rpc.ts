@@ -41,6 +41,14 @@ export interface RpcErrorDetailsMap {
   'workspace-invalid-path': { path: string }
   'workspace-name-conflict': { name: string }
   'workspace-move-invalid': { workspaceId: string; sessionId: SessionId; beforeSessionId?: SessionId }
+  /** lmo-server answered 404 for the requested pipeline domain id. */
+  'pipeline-not-found': {}
+  /** lmo-server rejected the HMAC identity (401). */
+  'pipeline-unauthorized': {}
+  /** lmo-server rejected the HMAC request as forbidden (403). */
+  'pipeline-forbidden': {}
+  /** lmo-server returned another HTTP failure, or the provider could not parse/transport a response. */
+  'pipeline-error': { httpStatus?: number }
   'directory-unreadable': { path: string }
   'directory-exists': { path: string }
   'directory-create-failed': { path: string }

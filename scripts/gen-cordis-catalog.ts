@@ -80,6 +80,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   invariants: 'invariants.md',
   llm: 'llm-streaming.md',
   lsp: 'lsp.md',
+  lmoPipeline: 'pipeline.md',
   messageFeedback: 'feedback.md',
   permissionPresets: 'permission-presets.md',
   planMode: 'plan.md',
@@ -92,6 +93,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   sessionProjectionCache: 'session-projection.md',
   sessionProjections: 'session-projection.md',
   sessions: 'session.md',
+  sessionTags: 'session.md',
   settings: 'settings.md',
   sessionTitle: 'session-title.md',
   skills: 'skills.md',
@@ -161,6 +163,7 @@ export const SERVICE_WALK_EXEMPTIONS: Record<string, string> = {
   slots: 'client-side interface-typed browser service — packages/client/runtime/README.md owns the API',
   theme: 'client-side interface-typed browser service — packages/client/ui-theme/README.md owns the API',
   workspaces: 'client-side interface-typed browser service — packages/client/runtime/README.md owns the API',
+  pipelines: 'client-side interface-typed browser service — packages/client/runtime/README.md owns the API',
 }
 
 /**
@@ -623,6 +626,27 @@ export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   WorkflowAgentEndInfo: 'event-local snapshot is owned by packages/workflow/workflow/src/index.ts',
   WorkflowAgentInfo: 'event-local snapshot is owned by packages/workflow/workflow/src/index.ts',
   WorkflowResultInfo: 'event-local snapshot is owned by packages/workflow/workflow/src/index.ts',
+  LmoApproveResult: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoJobId: 'lmo-server pipeline id is owned by packages/pipeline/lmo-pipeline/src/types.ts',
+  LmoJobPatch: 'lmo-server pipeline patch fields are owned by packages/pipeline/lmo-pipeline/src/types.ts',
+  LmoJobSummary: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoNodeId: 'lmo-server pipeline id is owned by packages/pipeline/lmo-pipeline/src/types.ts',
+  LmoNodeStatus: 'lmo-server pipeline status is owned by packages/pipeline/lmo-pipeline/src/types.ts',
+  LmoPatchJobResult: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoPipelineDetail: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoPipelineId: 'lmo-server pipeline id is owned by packages/pipeline/lmo-pipeline/src/types.ts',
+  LmoPipelineSummary: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoProject: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoProjectId: 'lmo-server pipeline id is owned by packages/pipeline/lmo-pipeline/src/types.ts',
+  LmoProjectSummary: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoPrd: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoPushPrdResult: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoReportNodeResult: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoRerunPipelineResult: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoRunnerId: 'lmo-server pipeline id is owned by packages/pipeline/lmo-pipeline/src/types.ts',
+  LmoRunnerNode: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
+  LmoStateId: 'lmo-server pipeline id is owned by packages/pipeline/lmo-pipeline/src/types.ts',
+  LmoStateSummary: 'lmo-server pipeline projection is owned by packages/pipeline/lmo-pipeline/README.md',
 }
 
 /** Repository data policy consumed by the Cordis catalog projector. */

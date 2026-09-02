@@ -69,7 +69,7 @@ export interface Config {
 export class ApiProxyService extends Service implements ApiProxy {
   static inject = [
     'agentDefaultModel', 'agents', 'attachments', 'directoryPicker', 'llm', 'sessions', 'subagents', 'sessionQuery',
-    'tools', 'userQuestions', 'workspaceRegistry',
+    'sessionTags', 'tools', 'userQuestions', 'workspaceRegistry',
   ]
 
   static Config: z<Config> = z.object({
@@ -82,6 +82,7 @@ export class ApiProxyService extends Service implements ApiProxy {
   readonly sessions: ApiProxy['sessions']
   readonly subagents: ApiProxy['subagents']
   readonly workspace: ApiProxy['workspace']
+  readonly pipeline: ApiProxy['pipeline']
   readonly host: ApiProxy['host']
   readonly goals: ApiProxy['goals']
   readonly skills: ApiProxy['skills']
@@ -110,6 +111,7 @@ export class ApiProxyService extends Service implements ApiProxy {
     this.sessions = api.sessions
     this.subagents = api.subagents
     this.workspace = api.workspace
+    this.pipeline = api.pipeline
     this.host = api.host
     this.goals = api.goals
     this.skills = api.skills

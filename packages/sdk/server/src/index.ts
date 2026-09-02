@@ -2,8 +2,9 @@
  * SDK-facing JSON-RPC plugin over stdio. An external `cordis.yml` decides
  * whether to load it; see the single-executable Agent Note and package README.
  * Stdout is reserved for protocol frames, so the tree must not load a stdout logger.
- * This plugin answers `shutdown`, disposes the complete root runtime, and exits 0; the app bin
- * owns EOF and signal exits. Keep named plugin exports with no default export so
+ * This plugin answers `shutdown`, disposes the complete root runtime, records
+ * exit code 0, and lets Node drain native handles before natural exit; the app
+ * bin owns EOF and signal exits. Keep named plugin exports with no default export so
  * Loader `unwrapExports` preserves `name`, `inject`, `Config`, and `apply`.
  *
  * @module @deepseek-ai/dsh-sdk-jsonrpc-server
@@ -25,23 +26,27 @@ export const inject = ['agents']
 export interface JsonRpcConfig {
   /** Report max-token turn/subagent termination as a successful SDK result. */
   maxTokensAsSuccess?: boolean
+  /** Agent preset id SDK-created sessions are composed from, like normal web sessions. */
+  agentPreset?: string
   /** Transport input override; production uses `process.stdin`. */
   input?: Readable
   /** Transport output override; production uses `process.stdout`. */
   output?: Writable
-  /** Process-exit override; production uses `process.exit`. */
+  /** Process-exit request override; production records the code and lets Node drain. */
   exit?: (code: number) => void
 }
 
 export const Config: Schema<JsonRpcConfig> = Schema.object({
   maxTokensAsSuccess: Schema.boolean().default(false),
+  agentPreset: Schema.string(),
 })
 
 /**
  * Serve SDK requests over the configured streams. Effect disposal shuts down
  * SDK-created agents and closes the transport. A `shutdown` response is flushed
- * before the root runtime is disposed and the process exits 0; the app bin
- * owns root-context disposal for EOF and signals.
+ * before the root runtime is disposed; the process then records exit code 0 and
+ * closes stdio so Node can retire native handles before natural exit. The app
+ * bin owns root-context disposal for EOF and signals.
  */
 export function apply(ctx: Context, config: JsonRpcConfig): void {
   // Cordis applies the schema default before invoking the plugin.
@@ -54,11 +59,12 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
   /* v8 ignore next -- production stdio wiring; tests always inject the runtime hooks */
   const output = config.output ?? process.stdout
   /* v8 ignore next -- production exit wiring; tests always inject the runtime hooks */
-  const exit = config.exit ?? ((code: number): void => { process.exit(code) })
+  const exit = config.exit ?? ((code: number): void => { process.exitCode = code })
 
   const transport = new JsonRpcLineTransport(input, output)
   const server = new HarnessSdkJsonRpcServer(ctx, transport, {
     maxTokensAsSuccess: resolvedConfig.maxTokensAsSuccess,
+    ...(resolvedConfig.agentPreset === undefined ? {} : { agentPreset: resolvedConfig.agentPreset }),
   })
 
   // Share one exit task so racing shutdown requests cannot dispose the root or
@@ -69,6 +75,11 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
       await Promise.allSettled([Promise.resolve().then(() => transport.flush())])
       await Promise.allSettled([Promise.resolve().then(() => rootFiber.dispose())])
       exit(0)
+      // Production stdio owns the process lifetime. Record the exit code and
+      // close the streams so Node can retire native handles before natural
+      // exit; process.exit() here can hit Windows libuv UV_HANDLE_CLOSING.
+      if (input === process.stdin && !input.destroyed) input.destroy()
+      if (output === process.stdout && !output.writableEnded) output.end()
     })()
     return exitTask
   }

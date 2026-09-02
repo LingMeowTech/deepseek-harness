@@ -18,7 +18,10 @@
 import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  FishLogo, IconNewChatOutline16, IconPanelLeftOutline16, Tooltip,
+  FishLogo,
+  IconCloseFill14, IconNewChatOutline16, IconPanelLeftOutline16,
+  IconSearchOutline16,
+  Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SidebarRootComponentProps } from './contract/slots.ts'
 import css from './SidebarRoot.module.css'
@@ -33,6 +36,23 @@ const COLLAPSE_SETTLE_MS = 150
  * edge — on the way to the conversation, or around a portalled menu.
  */
 const SCROLLBAR_LINGER_MS = 2000
+
+/** Column slide length; rail-search focus waits it out (matches the browser's). */
+const EXPAND_SLIDE_MS = 300
+
+/** `session.search` wire bound, measured in JavaScript UTF-16 code units. */
+const SEARCH_QUERY_MAX_CODE_UNITS = 500
+
+/** Keep the shared query inside the session.search wire contract. */
+function sanitizeSearchQuery(value: string): string {
+  const withoutNul = value.replaceAll('\0', '')
+  if (withoutNul.length <= SEARCH_QUERY_MAX_CODE_UNITS) return withoutNul
+  let end = SEARCH_QUERY_MAX_CODE_UNITS
+  const last = withoutNul.charCodeAt(end - 1)
+  const next = withoutNul.charCodeAt(end)
+  if (last >= 0xD800 && last <= 0xDBFF && next >= 0xDC00 && next <= 0xDFFF) end--
+  return withoutNul.slice(0, end)
+}
 
 /**
  * Render the sidebar column shell.
@@ -56,6 +76,23 @@ export function SidebarRoot({
     return () => { window.clearTimeout(timer) }
   }, [collapsed])
   const wide = !collapsed || !settled
+
+  // The one shared search box: raw query goes to both regions, each parsing
+  // its own scope prefix (workspace: / pipeline:) and searching locally.
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchInput = useRef<HTMLInputElement | null>(null)
+  // Rail search = expand + land in the box: the flag arms before the expand
+  // request; once the shell flips wide the input mounts and takes focus.
+  const [searchOnExpand, setSearchOnExpand] = useState(false)
+  useEffect(() => {
+    if (wide && searchOnExpand) {
+      const timer = window.setTimeout(() => {
+        searchInput.current?.focus({ preventScroll: true })
+        setSearchOnExpand(false)
+      }, EXPAND_SLIDE_MS)
+      return () => { window.clearTimeout(timer) }
+    }
+  }, [wide, searchOnExpand])
 
   // Freeze the content at its expanded width while it fades out (collapsed
   // && wide): the sliding column then clips it instead of reflowing it. The
@@ -110,6 +147,13 @@ export function SidebarRoot({
       cancelLinger()
     }
   }, [pointerInside])
+
+  // The browsing regions share the shell's search box; each owns its scope.
+  const sectionOwner = {
+    wide,
+    expandSidebar: () => { if (collapsed) toggleSidebar() },
+    searchQuery,
+  }
 
   return (
     <div
@@ -187,13 +231,69 @@ export function SidebarRoot({
         </button>
       </Tooltip>
 
-      {/* The browsing region fills the column between the controls and the
-          foot in both states; its rail icon column rides the same slot. */}
+      {/* The shared search row: one box for both browsing regions. Wide renders
+          the input; the rail keeps search as its own 36px control that expands
+          and lands in the box. */}
+      <div className={css.searchRow}>
+        {wide && (
+          <div className={clsx(css.search, css.wide)}>
+            <Tooltip label={t('search.label')} side="bottom" delayMs={500}>
+              <button
+                type="button"
+                className={css.searchButton}
+                aria-label={t('search.label')}
+                onClick={() => { searchInput.current?.focus() }}
+              >
+                <IconSearchOutline16 size={14} />
+              </button>
+            </Tooltip>
+            <input
+              ref={searchInput}
+              className={css.searchInput}
+              type="text"
+              placeholder={t('search.placeholder')}
+              maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(sanitizeSearchQuery(e.target.value)) }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearchQuery('')
+              }}
+            />
+            {searchQuery !== '' && (
+              <button
+                type="button"
+                className={css.clearButton}
+                aria-label={t('search.clear')}
+                onClick={() => { setSearchQuery(''); searchInput.current?.focus() }}
+              >
+                <IconCloseFill14 />
+              </button>
+            )}
+          </div>
+        )}
+        {!wide && (
+          <Tooltip label={t('search.label')}>
+            <button
+              type="button"
+              className={clsx(css.iconButton, css.railSearch)}
+              aria-label={t('search.label')}
+              onClick={() => {
+                setSearchOnExpand(true)
+                toggleSidebar()
+              }}
+            >
+              <IconSearchOutline16 size={18} />
+            </button>
+          </Tooltip>
+        )}
+      </div>
+
+      {/* The browsing regions fill the column between the controls and the
+          foot in both states; their rail icon columns ride the same slot.
+          Order: workspace region first, pipeline zone below it. */}
       <div className={css.regionArea}>
-        {renderSlot('sidebar.workspaces', {
-          wide,
-          expandSidebar: () => { if (collapsed) toggleSidebar() },
-        })}
+        {renderSlot('sidebar.workspaces', sectionOwner)}
+        {renderSlot('sidebar.pipelines', sectionOwner)}
       </div>
 
       {/* Footer actions stack above Settings in both sidebar widths. */}

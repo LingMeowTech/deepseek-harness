@@ -358,3 +358,38 @@ export const sessionCancelRequestSchema = z.object({
 export const sessionCancelValueSchema = z.object({
   accepted: z.literal(true),
 }) satisfies z.ZodType<Wire<ResponseValue<'session.cancel'>>>
+
+/** One validated session-tag list; empty is a valid full-clear for set. */
+const sessionTagListSchema = z.array(z.string().trim().min(1))
+
+/** session.tags.list request payload. */
+export const sessionTagsListRequestSchema = z.object({
+  sessionId: sessionIdSchema,
+}) satisfies z.ZodType<Wire<RequestPayload<'session.tags.list'>>>
+
+/** session.tags.list response value. */
+export const sessionTagsListValueSchema = z.object({
+  tags: z.array(z.string()),
+}) satisfies z.ZodType<Wire<ResponseValue<'session.tags.list'>>>
+
+/** session.tags.set request payload; an empty list clears every tag. */
+export const sessionTagsSetRequestSchema = z.object({
+  sessionId: sessionIdSchema,
+  tags: sessionTagListSchema,
+}) satisfies z.ZodType<Wire<RequestPayload<'session.tags.set'>>>
+
+/** session.tags.set response value. */
+export const sessionTagsSetValueSchema = z.object({
+  tags: z.array(z.string()),
+}) satisfies z.ZodType<Wire<ResponseValue<'session.tags.set'>>>
+
+/** session.tags.remove request payload. */
+export const sessionTagsRemoveRequestSchema = z.object({
+  sessionId: sessionIdSchema,
+  tags: sessionTagListSchema,
+}) satisfies z.ZodType<Wire<RequestPayload<'session.tags.remove'>>>
+
+/** session.tags.remove response value. */
+export const sessionTagsRemoveValueSchema = z.object({
+  tags: z.array(z.string()),
+}) satisfies z.ZodType<Wire<ResponseValue<'session.tags.remove'>>>

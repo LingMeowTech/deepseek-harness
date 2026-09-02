@@ -1028,6 +1028,85 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'lmoPipeline',
+    summary: 'Abstract LMO pipeline service.',
+    description: 'Abstract LMO pipeline service. Subclass, implement the HTTP transport, and load the subclass as a plugin — it registers as `ctx.lmoPipeline` (one implementation per context; loading a second is cordis\' standard duplicate failure).\n\nProviders return DSH camelCase projections of lmo-server records and throw LmoPipelineError for wire failures; business callers never parse lmo-server JSON themselves.',
+    methods: [
+      {
+        signature: 'abstract listProjects(): Promise<readonly LmoProjectSummary[]>',
+        description: 'List every visible project node.',
+        parameters: [],
+        returns: 'project summaries in lmo-server order.',
+      },
+      {
+        signature: 'abstract getProject(id: LmoProjectId): Promise<LmoProject>',
+        description: 'Fetch one project with its child pipeline summaries.',
+        parameters: [{ name: 'id', description: 'Project id.' }],
+        returns: 'the project detail.',
+      },
+      {
+        signature: 'abstract listPipelines(projectId?: LmoProjectId, running?: boolean): Promise<readonly LmoPipelineSummary[]>',
+        description: 'List pipeline nodes, optionally filtered by owning project and by running state (running=true means status 2/3, false means 0/4/5/6).',
+        parameters: [{ name: 'projectId', description: 'Owning project filter; omitted lists every visible pipeline.' }, { name: 'running', description: 'Running-state filter; omitted lists every status.' }],
+        returns: 'pipeline summaries in lmo-server order.',
+      },
+      {
+        signature: 'abstract getPipeline(id: LmoPipelineId): Promise<LmoPipelineDetail>',
+        description: 'Fetch one pipeline detail: summary fields plus PRD, states, and jobs.',
+        parameters: [{ name: 'id', description: 'Pipeline id.' }],
+        returns: 'the complete pipeline detail.',
+      },
+      {
+        signature: 'abstract pushPrd(id: LmoPipelineId, content: string): Promise<LmoPushPrdResult>',
+        description: 'Push a new PRD version onto a pipeline. lmo-server moves the node to status 1 (awaiting approval) and increments `prd_version`.',
+        parameters: [{ name: 'id', description: 'Pipeline id.' }, { name: 'content', description: 'Markdown PRD content.' }],
+        returns: 'the updated pipeline id and version.',
+      },
+      {
+        signature: 'abstract approve(id: LmoPipelineId): Promise<LmoApproveResult>',
+        description: 'Approve a pipeline\'s PRD. lmo-server moves the node to status 2 (developing); runners may then claim its states and jobs.',
+        parameters: [{ name: 'id', description: 'Pipeline id.' }],
+        returns: 'the updated pipeline id and status.',
+      },
+      {
+        signature: 'abstract listStates(pipelineId: LmoPipelineId): Promise<readonly LmoStateSummary[]>',
+        description: 'List states owned by one pipeline.',
+        parameters: [{ name: 'pipelineId', description: 'Owning pipeline id.' }],
+        returns: 'state summaries in lmo-server order.',
+      },
+      {
+        signature: 'abstract listJobs(stateId: LmoStateId): Promise<readonly LmoJobSummary[]>',
+        description: 'List jobs owned by one state.',
+        parameters: [{ name: 'stateId', description: 'Owning state id.' }],
+        returns: 'job summaries in lmo-server order.',
+      },
+      {
+        signature: 'abstract patchJob(id: LmoJobId, patch: LmoJobPatch): Promise<LmoPatchJobResult>',
+        description: 'Patch one job node with any non-empty subset of the patch fields.',
+        parameters: [{ name: 'id', description: 'Job id.' }, { name: 'patch', description: 'Fields to update.' }],
+        returns: 'the patched job id.',
+      },
+      {
+        signature: 'abstract rerunPipeline(id: LmoPipelineId): Promise<LmoRerunPipelineResult>',
+        description: 'Reset a pipeline and its state/job descendants to pending for a rerun.',
+        parameters: [{ name: 'id', description: 'Pipeline id.' }],
+        returns: 'the pipeline id and the number of reset nodes.',
+      },
+      {
+        signature: 'abstract reportNode( runnerId: LmoRunnerId, nodeId: LmoNodeId, status: LmoNodeStatus, desc: string, output?: string, ): Promise<LmoReportNodeResult>',
+        description: 'Report one runner-owned node result back to lmo-server.',
+        parameters: [{ name: 'runnerId', description: 'Runner server id the node was assigned to.' }, { name: 'nodeId', description: 'Graph node id.' }, { name: 'status', description: 'Node status to report (2/3/4/6 in the runner vocabulary).' }, { name: 'desc', description: 'Progress description.' }, { name: 'output', description: 'Optional result data; lmo-server stores it without routing it.' }],
+        returns: 'the lmo-server acceptance result.',
+      },
+      {
+        signature: 'abstract listRunnerNodes(runnerId: LmoRunnerId, status?: \'pending\' | \'all\'): Promise<readonly LmoRunnerNode[]>',
+        description: 'List graph nodes assigned to one runner server.',
+        parameters: [{ name: 'runnerId', description: 'Runner server id.' }, { name: 'status', description: '`pending` (default) or `all`.' }],
+        returns: 'assigned nodes in lmo-server order.',
+      },
+    ],
+  },
+  {
     key: 'lsp',
     summary: 'The LSP capability seam (`ctx.lsp`).',
     description: 'The LSP capability seam (`ctx.lsp`). Owns provider registration/selection and normalized query execution; exposes exactly the four operations and no protocol escape hatch.',
@@ -1508,6 +1587,31 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Create a live child session from a stable prefix of a live source. `boundary` is an inclusive source event seq; omitted means the source\'s current last event. The selected slice may end with a between-turn event but must not end inside an open turn.',
         parameters: [{ name: 'source', description: 'Live source session object or id.' }, { name: 'boundary', description: 'Inclusive source event seq to fork through; omitted means the source\'s current last event, and omitted on an empty source forks an empty child.' }, { name: 'childSessionId', description: 'Optional child session id; omitted delegates to `SessionStore`\'s id policy.' }],
         returns: 'The created live child session.',
+      },
+    ],
+  },
+  {
+    key: 'sessionTags',
+    summary: 'Durable session tag registry.',
+    description: 'Durable session tag registry. Set writes the complete tag list for a session; remove deletes the named tags and drops the row when none remain.',
+    methods: [
+      {
+        signature: 'list(sessionId: SessionId): Promise<readonly string[]>',
+        description: 'Read one session\'s durable tag list.',
+        parameters: [{ name: 'sessionId', description: 'the tagged session.' }],
+        returns: 'the tags in stored order; empty for an untagged session.',
+      },
+      {
+        signature: 'async set(sessionId: SessionId, tags: readonly string[]): Promise<readonly string[]>',
+        description: 'Replace one session\'s complete tag list. The normalized list is written durably before the `domain/changed` notification publishes.',
+        parameters: [{ name: 'sessionId', description: 'the tagged session.' }, { name: 'tags', description: 'new complete tag list; empty deletes the tag row.' }],
+        returns: 'the stored normalized tags.',
+      },
+      {
+        signature: 'async remove(sessionId: SessionId, tags: readonly string[]): Promise<readonly string[]>',
+        description: 'Remove named tags from one session, keeping the remaining order. Removing the last tag deletes the row; absent sessions are idempotent no-ops.',
+        parameters: [{ name: 'sessionId', description: 'the tagged session.' }, { name: 'tags', description: 'tags to remove.' }],
+        returns: 'the remaining stored tags.',
       },
     ],
   },
@@ -3641,6 +3745,66 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export class LlmRuntime extends Service {\n    constructor(ctx: Context);\n    registerAdapter(providers: string[], adapter: LlmAdapter): AdapterRegistrationHandle;\n    listProviders(): LlmProviderInfo[];\n    registerConfigurableProviders(entries: readonly LlmConfigurableProvider[]): DirectoryRegistrationHandle;\n    listConfigurableProviders(): LlmConfigurableProvider[];\n    registerModelDiscovery(settingsNs: string, discover: (request: LlmModelDiscoveryRequest) => Promise<readonly LlmDiscoveredModel[]>): () => void;\n    async discoverModels(settingsNs: string, request: LlmModelDiscoveryRequest): Promise<LlmDiscoveredModel[]>;\n    providerRetryPolicy(provider: string): ResolvedRetryPolicy;\n    async listModels(provider: string): Promise<LlmModelInfo[]>;\n    async resolveModelInfo(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>;\n    async resolveCallConfig(config: LlmCallConfig, signal?: AbortSignal): Promise<LlmCallConfig>;\n    async prepareCall(config: LlmCallConfig, signal?: AbortSignal): Promise<PreparedLlmCall>;\n    stream(options: GenerateOptions): AsyncIterable<StreamChunk>;\n}',
   },
   {
+    name: 'LmoApproveResult',
+    declaration: 'export interface LmoApproveResult {\n    readonly pipelineId: LmoPipelineId;\n    readonly status: LmoNodeStatus;\n}',
+  },
+  {
+    name: 'LmoJobPatch',
+    declaration: 'export interface LmoJobPatch {\n    readonly name?: string;\n    readonly descText?: string;\n    readonly command?: string;\n    readonly status?: LmoNodeStatus;\n    readonly runnerId?: LmoRunnerId;\n    readonly payload?: string;\n}',
+  },
+  {
+    name: 'LmoJobSummary',
+    declaration: 'export interface LmoJobSummary {\n    readonly jobId: LmoJobId;\n    readonly stateId: LmoStateId;\n    readonly name: string;\n    readonly descText?: string;\n    readonly command?: string;\n    readonly status: LmoNodeStatus;\n    readonly runnerId?: LmoRunnerId;\n    readonly updatedAt?: string;\n}',
+  },
+  {
+    name: 'LmoNodeStatus',
+    declaration: 'export type LmoNodeStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;',
+  },
+  {
+    name: 'LmoPatchJobResult',
+    declaration: 'export interface LmoPatchJobResult {\n    readonly jobId: LmoJobId;\n}',
+  },
+  {
+    name: 'LmoPipelineDetail',
+    declaration: 'export interface LmoPipelineDetail {\n    readonly pipelineId: LmoPipelineId;\n    readonly projectId: LmoProjectId;\n    readonly name: string;\n    readonly descText?: string;\n    readonly status: LmoNodeStatus;\n    readonly repo?: string;\n    readonly branch?: string;\n    readonly isLooping: boolean;\n    readonly prd: LmoPrd;\n    readonly autoPlan?: string;\n    readonly states: readonly LmoStateSummary[];\n    readonly jobs: readonly LmoJobSummary[];\n}',
+  },
+  {
+    name: 'LmoPipelineSummary',
+    declaration: 'export interface LmoPipelineSummary {\n    readonly pipelineId: LmoPipelineId;\n    readonly projectId: LmoProjectId;\n    readonly name: string;\n    readonly descText?: string;\n    readonly status: LmoNodeStatus;\n    readonly stateTotal: number;\n    readonly stateCompleted: number;\n    readonly jobTotal: number;\n    readonly jobCompleted: number;\n    readonly isLooping: boolean;\n    readonly updatedAt?: string;\n}',
+  },
+  {
+    name: 'LmoPrd',
+    declaration: 'export interface LmoPrd {\n    readonly version: string;\n    readonly content: string;\n    readonly updatedAt?: string;\n}',
+  },
+  {
+    name: 'LmoProject',
+    declaration: 'export interface LmoProject {\n    readonly projectId: LmoProjectId;\n    readonly name: string;\n    readonly descText?: string;\n    readonly status: LmoNodeStatus;\n    readonly pipelines: readonly LmoPipelineSummary[];\n}',
+  },
+  {
+    name: 'LmoProjectSummary',
+    declaration: 'export interface LmoProjectSummary {\n    readonly projectId: LmoProjectId;\n    readonly parentId: LmoProjectId;\n    readonly name: string;\n    readonly descText?: string;\n    readonly status: LmoNodeStatus;\n    readonly pipelineTotal: number;\n    readonly pipelineRunning: number;\n    readonly pipelineStopped: number;\n    readonly updatedAt?: string;\n}',
+  },
+  {
+    name: 'LmoPushPrdResult',
+    declaration: 'export interface LmoPushPrdResult {\n    readonly pipelineId: LmoPipelineId;\n    readonly prdVersion: string;\n}',
+  },
+  {
+    name: 'LmoReportNodeResult',
+    declaration: 'export interface LmoReportNodeResult {\n    readonly ok: boolean;\n}',
+  },
+  {
+    name: 'LmoRerunPipelineResult',
+    declaration: 'export interface LmoRerunPipelineResult {\n    readonly pipelineId: LmoPipelineId;\n    readonly resetCount: number;\n}',
+  },
+  {
+    name: 'LmoRunnerNode',
+    declaration: 'export interface LmoRunnerNode {\n    readonly nodeId: LmoNodeId;\n    readonly type: \'project\' | \'pipeline\' | \'state\' | \'job\';\n    readonly parentId: string;\n    readonly ownerProjectId: LmoProjectId;\n    readonly name: string;\n    readonly descText: string;\n    readonly content?: string;\n    readonly sessionId?: string;\n    readonly agentBackend: string;\n    readonly status: LmoNodeStatus;\n    readonly isDecomposed: boolean;\n    readonly isLooping: boolean;\n    readonly isEntry: boolean;\n    readonly isExit: boolean;\n    readonly payload?: string;\n    readonly runnerId?: LmoRunnerId;\n    readonly depth: number;\n    readonly path?: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'LmoStateSummary',
+    declaration: 'export interface LmoStateSummary {\n    readonly stateId: LmoStateId;\n    readonly pipelineId: LmoPipelineId;\n    readonly name: string;\n    readonly descText?: string;\n    readonly status: LmoNodeStatus;\n    readonly isDecomposed: boolean;\n    readonly isLooping: boolean;\n    readonly runnerId?: LmoRunnerId;\n    readonly jobTotal: number;\n    readonly jobCompleted: number;\n    readonly updatedAt?: string;\n}',
+  },
+  {
     name: 'LspHover',
     declaration: 'export interface LspHover {\n    readonly contents: string;\n    readonly range?: LspRange;\n}',
   },
@@ -3962,7 +4126,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'RpcErrorDetailsMap',
-    declaration: 'export interface RpcErrorDetailsMap {\n    \'bad-request\': {\n        issues: ZodIssue[];\n    };\n    \'cancelled\': {};\n    \'session-not-found\': {\n        sessionId: SessionId;\n    };\n    \'model-unavailable\': {\n        provider: string;\n        model: string;\n    };\n    \'session-conflict\': {\n        sessionId: SessionId;\n        requestedCwd: string;\n        existingCwd?: string;\n    };\n    \'invalid-time-zone\': {\n        value: string;\n    };\n    \'workspace-attach-failed\': {\n        sessionId: SessionId;\n        workspaceId: string;\n    };\n    \'workspace-not-found\': {\n        workspaceId: string;\n    };\n    \'workspace-invalid-path\': {\n        path: string;\n    };\n    \'workspace-name-conflict\': {\n        name: string;\n    };\n    \'workspace-move-invalid\': {\n        workspaceId: string;\n        sessionId: SessionId;\n        beforeSessionId?: SessionId;\n    };\n    \'directory-unreadable\': {\n        path: string;\n    };\n    \'directory-exists\': {\n        path: string;\n    };\n    \'directory-create-failed\': {\n        path: string;\n    };\n    \'directory-picker-unavailable\': {\n        capability: string;\n    };\n    \'agent-preset-read-only\': {\n        agentPreset: string;\n        reason: string;\n    };\n    \'agent-preset-locked\': {\n        sessionId: SessionId;\n        agentPreset: string;\n    };\n    \'agent-preset-conflict\': {\n        sessionId: SessionId;\n        requestedPreset: string;\n        existingPreset?: string;\n    };\n    \'agent-preset-not-found\': {\n        agentPreset: string;\n      /* …truncated — full shape in source */',
+    declaration: 'export interface RpcErrorDetailsMap {\n    \'bad-request\': {\n        issues: ZodIssue[];\n    };\n    \'cancelled\': {};\n    \'session-not-found\': {\n        sessionId: SessionId;\n    };\n    \'model-unavailable\': {\n        provider: string;\n        model: string;\n    };\n    \'session-conflict\': {\n        sessionId: SessionId;\n        requestedCwd: string;\n        existingCwd?: string;\n    };\n    \'invalid-time-zone\': {\n        value: string;\n    };\n    \'workspace-attach-failed\': {\n        sessionId: SessionId;\n        workspaceId: string;\n    };\n    \'workspace-not-found\': {\n        workspaceId: string;\n    };\n    \'workspace-invalid-path\': {\n        path: string;\n    };\n    \'workspace-name-conflict\': {\n        name: string;\n    };\n    \'workspace-move-invalid\': {\n        workspaceId: string;\n        sessionId: SessionId;\n        beforeSessionId?: SessionId;\n    };\n    \'pipeline-not-found\': {};\n    \'pipeline-unauthorized\': {};\n    \'pipeline-forbidden\': {};\n    \'pipeline-error\': {\n        httpStatus?: number;\n    };\n    \'directory-unreadable\': {\n        path: string;\n    };\n    \'directory-exists\': {\n        path: string;\n    };\n    \'directory-create-failed\': {\n        path: string;\n    };\n    \'directory-picker-unavailable\': {\n        capability: string;\n    };\n    \'agent-preset-read-only\': {\n        agentPreset: string;\n        reason: string;\n    };\n    \'agent-preset-locked\': {\n        sessionId: SessionId;\n        agentPreset: string;\n    };\n    \'agent-preset-conflict\': {\n        sessionI /* …truncated — full shape in source */',
   },
   {
     name: 'RpcId',

@@ -62,6 +62,7 @@ import type TeamService from '@deepseek-ai/dsh-experimental-agent-team'
 import * as ToolTeam from '@deepseek-ai/dsh-experimental-tool-agent-team'
 import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
 import * as ToolSubagent from '@deepseek-ai/dsh-tool-subagent'
+import * as ToolPipeline from '@deepseek-ai/dsh-tool-lmo-pipeline'
 import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
 import VmWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import * as ToolRalph from '@deepseek-ai/dsh-tool-ralph'
@@ -588,6 +589,21 @@ const TOOL_PACKAGES: ToolPackage[] = [
       await ctx.plugin(VmWorkflowEngine, { provider: 'mock' })
       await ctx.plugin(ToolWorkflow)
     },
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-lmo-pipeline',
+    dir: 'tool-lmo-pipeline',
+    source: 'packages/pipeline/tool-lmo-pipeline/src/index.ts',
+    requires: ['ctx.tools', 'ctx.lmoPipeline'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      // Schemas do not read pipeline data, so an empty injected service
+      // satisfies the seam without any provider transport.
+      ctx.provide('lmoPipeline', {} as never)
+      await ctx.plugin(ToolPipeline)
+    },
+    note:
+      'pipeline_* tools keep provider transport behind ctx.lmoPipeline so model-visible schemas stay stable across backend swaps.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-web',

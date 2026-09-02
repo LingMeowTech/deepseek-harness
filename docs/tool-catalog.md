@@ -40,6 +40,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-experimental-tool-agent-team` | `followup_task`, `interrupt_agent`, `list_agents`, `send_message`, `spawn_teammate`, `team_task_create`, `team_task_get`, `team_task_list`, `team_task_update`, `wait_agent` | `ctx.tools`, `ctx.systemPrompt`, `ctx.agentTeams`, `an exact live Team member Agent` | `tool/call`, `team/member`, `team/message/queued`, `team/message/delivered`, `team/task`, `tool/result` | - | All ten tools are scoped to implicit Team Leads and durable teammates. The shipped dsh-base bundle keeps the package disabled; the documented Agent Teams profile patch enables it while disabling the legacy continuable-child control names. |
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
+| `@deepseek-ai/dsh-tool-lmo-pipeline` | `pipeline_approve`, `pipeline_get`, `pipeline_jobs`, `pipeline_pipelines`, `pipeline_prd`, `pipeline_projects`, `pipeline_report_node`, `pipeline_rerun`, `pipeline_states` | `ctx.tools`, `ctx.lmoPipeline` | `tool/call`, `tool/result` | - | pipeline_* tools keep provider transport behind ctx.lmoPipeline so model-visible schemas stay stable across backend swaps. |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
@@ -2168,6 +2169,223 @@ Constraints: concurrency and total-agent caps apply; no filesystem, network, tim
 ```
 
 Source: [`packages/workflow/tool-workflow/src/index.ts`](../packages/workflow/tool-workflow/src/index.ts)
+
+<a id="deepseek-aidsh-tool-lmo-pipeline"></a>
+
+## `@deepseek-ai/dsh-tool-lmo-pipeline`
+
+### `pipeline_approve`
+
+批准指定管线的 PRD，并把管线推进到状态 2（开发中）。这是不可逆的状态推进：批准后 runner 会开始领取并执行该管线的 state/job，请先确认 PRD 内容。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "pipeline_id": {
+      "type": "string",
+      "description": "要批准的管线 id"
+    }
+  },
+  "required": [
+    "pipeline_id"
+  ]
+}
+```
+
+Source: [`packages/pipeline/tool-lmo-pipeline/src/index.ts`](../packages/pipeline/tool-lmo-pipeline/src/index.ts)
+
+### `pipeline_get`
+
+读取一个管线的完整详情：PRD、state 列表、job 列表及各自状态码。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "pipeline_id": {
+      "type": "string",
+      "description": "管线 id（pipeline_pipelines 返回的 pipeline_id）"
+    }
+  },
+  "required": [
+    "pipeline_id"
+  ]
+}
+```
+
+Source: [`packages/pipeline/tool-lmo-pipeline/src/index.ts`](../packages/pipeline/tool-lmo-pipeline/src/index.ts)
+
+### `pipeline_jobs`
+
+列出一个 state 下的全部 job（任务）及状态码。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "state_id": {
+      "type": "string",
+      "description": "state id（pipeline_states 返回的 state_id）"
+    }
+  },
+  "required": [
+    "state_id"
+  ]
+}
+```
+
+Source: [`packages/pipeline/tool-lmo-pipeline/src/index.ts`](../packages/pipeline/tool-lmo-pipeline/src/index.ts)
+
+### `pipeline_pipelines`
+
+列出管线；可按 project_id 过滤，running=true 只列出运行中（状态 2/3）的管线。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "description": "项目 id（pipeline_projects 返回的 project_id）；省略则列出全部项目"
+    },
+    "running": {
+      "type": "boolean",
+      "description": "true 只看运行中管线，false 只看非运行管线；省略则不过滤"
+    }
+  }
+}
+```
+
+Source: [`packages/pipeline/tool-lmo-pipeline/src/index.ts`](../packages/pipeline/tool-lmo-pipeline/src/index.ts)
+
+### `pipeline_prd`
+
+推送一个新的 PRD 版本到指定管线。管线状态会变为 1（待审批），并等待人工审批。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "pipeline_id": {
+      "type": "string",
+      "description": "目标管线 id"
+    },
+    "content": {
+      "type": "string",
+      "description": "完整 PRD Markdown 内容"
+    }
+  },
+  "required": [
+    "pipeline_id",
+    "content"
+  ]
+}
+```
+
+Source: [`packages/pipeline/tool-lmo-pipeline/src/index.ts`](../packages/pipeline/tool-lmo-pipeline/src/index.ts)
+
+### `pipeline_projects`
+
+列出 lmo-server 中的项目及其管线统计。返回项目名、状态码和管线数量。
+
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+Source: [`packages/pipeline/tool-lmo-pipeline/src/index.ts`](../packages/pipeline/tool-lmo-pipeline/src/index.ts)
+
+### `pipeline_report_node`
+
+向 lmo-server 回传一个 runner 节点的最新执行状态。高风险且不可逆：状态 4（已完成）会结束该节点并触发后续节点调度；错误状态（如 6 取消）可能中断整条管线，请只回传该节点真实状态。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "runner_id": {
+      "type": "string",
+      "description": "runner server id（该节点归属的 runner）"
+    },
+    "node_id": {
+      "type": "string",
+      "description": "要回传的节点 id"
+    },
+    "status": {
+      "type": "number",
+      "description": "节点状态码：2 开发中 / 3 测试中 / 4 已完成 / 6 已取消",
+      "enum": [
+        2,
+        3,
+        4,
+        6
+      ]
+    },
+    "desc": {
+      "type": "string",
+      "description": "进度或结果说明"
+    },
+    "output": {
+      "type": "string",
+      "description": "节点结果数据；lmo-server 只存储、不流转"
+    }
+  },
+  "required": [
+    "runner_id",
+    "node_id",
+    "status"
+  ]
+}
+```
+
+Source: [`packages/pipeline/tool-lmo-pipeline/src/index.ts`](../packages/pipeline/tool-lmo-pipeline/src/index.ts)
+
+### `pipeline_rerun`
+
+重置管线及其全部 state/job 为待执行（0）并重新运行。高风险：会清除当前进度、重新触发执行，请先确认管线当前状态与未完成任务。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "pipeline_id": {
+      "type": "string",
+      "description": "要重跑的管线 id"
+    }
+  },
+  "required": [
+    "pipeline_id"
+  ]
+}
+```
+
+Source: [`packages/pipeline/tool-lmo-pipeline/src/index.ts`](../packages/pipeline/tool-lmo-pipeline/src/index.ts)
+
+### `pipeline_states`
+
+列出一个管线下的全部 state（阶段）及状态码。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "pipeline_id": {
+      "type": "string",
+      "description": "管线 id"
+    }
+  },
+  "required": [
+    "pipeline_id"
+  ]
+}
+```
+
+Source: [`packages/pipeline/tool-lmo-pipeline/src/index.ts`](../packages/pipeline/tool-lmo-pipeline/src/index.ts)
+
+pipeline_* tools keep provider transport behind ctx.lmoPipeline so model-visible schemas stay stable across backend swaps.
 
 <a id="deepseek-aidsh-tool-web"></a>
 

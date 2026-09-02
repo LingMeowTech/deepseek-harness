@@ -27,6 +27,9 @@ import {
   sessionRenameRequestSchema,
   sessionSearchRequestSchema,
   sessionSelectModelRequestSchema,
+  sessionTagsListRequestSchema,
+  sessionTagsRemoveRequestSchema,
+  sessionTagsSetRequestSchema,
   sessionUpdateQueueRequestSchema,
 } from '../api/sessions.schema.ts'
 import {
@@ -43,6 +46,16 @@ import {
   workspaceListRequestSchema,
   workspaceRenameRequestSchema,
 } from '../api/workspace.schema.ts'
+import {
+  pipelineApproveRequestSchema,
+  pipelineGetRequestSchema,
+  pipelineListJobsRequestSchema,
+  pipelineListPipelinesRequestSchema,
+  pipelineListProjectsRequestSchema,
+  pipelineListStatesRequestSchema,
+  pipelinePushPrdRequestSchema,
+  pipelineRerunRequestSchema,
+} from '../api/pipeline.schema.ts'
 import { skillListRequestSchema } from '../api/skills.schema.ts'
 import {
   agentPresetCopyRequestSchema, agentPresetListRequestSchema, agentPresetOpenDocumentRequestSchema,
@@ -102,6 +115,9 @@ const UNARY_ROUTES: UnaryRoutes = {
   'session.attachment': { schema: sessionAttachmentRequestSchema, invoke: (api, r) => api.sessions.attachment(r) },
   'session.updateQueue': { schema: sessionUpdateQueueRequestSchema, invoke: (api, r) => api.sessions.updateQueue(r) },
   'session.cancel': { schema: sessionCancelRequestSchema, invoke: (api, r) => api.sessions.cancel(r) },
+  'session.tags.list': { schema: sessionTagsListRequestSchema, invoke: (api, r) => api.sessions.tags.list(r) },
+  'session.tags.set': { schema: sessionTagsSetRequestSchema, invoke: (api, r) => api.sessions.tags.set(r) },
+  'session.tags.remove': { schema: sessionTagsRemoveRequestSchema, invoke: (api, r) => api.sessions.tags.remove(r) },
   'subagent.list': { schema: subagentListRequestSchema, invoke: (api, r, signal) => api.subagents.list(r, signal) },
   'subagent.history': { schema: subagentHistoryRequestSchema, invoke: (api, r, signal) => api.subagents.history(r, signal) },
   'subagent.prompt': { schema: subagentPromptRequestSchema, invoke: (api, r, signal) => api.subagents.prompt(r, signal) },
@@ -120,6 +136,14 @@ const UNARY_ROUTES: UnaryRoutes = {
   'workspace.insertBefore': { schema: workspaceInsertBeforeRequestSchema, invoke: (api, r) => api.workspace.insertBefore(r) },
   'workspace.insertSessionBefore': { schema: workspaceInsertSessionBeforeRequestSchema, invoke: (api, r) => api.workspace.insertSessionBefore(r) },
   'workspace.archiveSession': { schema: workspaceArchiveSessionRequestSchema, invoke: (api, r) => api.workspace.archiveSession(r) },
+  'pipeline.listProjects': { schema: pipelineListProjectsRequestSchema, invoke: (api, r) => api.pipeline.listProjects(r) },
+  'pipeline.listPipelines': { schema: pipelineListPipelinesRequestSchema, invoke: (api, r) => api.pipeline.listPipelines(r) },
+  'pipeline.get': { schema: pipelineGetRequestSchema, invoke: (api, r) => api.pipeline.get(r) },
+  'pipeline.pushPrd': { schema: pipelinePushPrdRequestSchema, invoke: (api, r) => api.pipeline.pushPrd(r) },
+  'pipeline.approve': { schema: pipelineApproveRequestSchema, invoke: (api, r) => api.pipeline.approve(r) },
+  'pipeline.rerun': { schema: pipelineRerunRequestSchema, invoke: (api, r) => api.pipeline.rerun(r) },
+  'pipeline.listStates': { schema: pipelineListStatesRequestSchema, invoke: (api, r) => api.pipeline.listStates(r) },
+  'pipeline.listJobs': { schema: pipelineListJobsRequestSchema, invoke: (api, r) => api.pipeline.listJobs(r) },
   'skill.list': { schema: skillListRequestSchema, invoke: (api, r) => api.skills.list(r) },
   'agentPreset.list': { schema: agentPresetListRequestSchema, invoke: (api, r) => api.agentPresets.list(r) },
   'agentPreset.select': { schema: agentPresetSelectRequestSchema, invoke: (api, r) => api.agentPresets.select(r) },

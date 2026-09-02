@@ -42,12 +42,14 @@ export function apply(ctx: ClientContext): void {
       name: 'sidebar',
       locale: NS,
       // The shell owns geometry; ui-workspace registers the whole browsing
-      // region (header, search, session list, workspace dialogs), ui-settings
-      // registers the foot trigger + settings panel.
+      // region (header, search, session list, workspace dialogs), ui-lmo-pipeline
+      // registers the pipeline zone below it, ui-settings registers the foot
+      // trigger + settings panel.
       children: {
         'sidebar.brand.mark': { kind: 'single', scope: 'root' },
         'sidebar.brand.name': { kind: 'single', scope: 'root' },
         'sidebar.workspaces': { kind: 'single', scope: 'root' },
+        'sidebar.pipelines': { kind: 'single', scope: 'root' },
         'sidebar.settings': { kind: 'single', scope: 'root' },
         'sidebar.footer.action': { kind: 'list', scope: 'root' },
       },

@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-16-sdk-exit-drain-windows-race.md
+2026-08-16-sdk-exit-drain-windows-race.md: aa69174ebdfbe4ece1f3ede9052dbdd6d5f30a79
+2026-08-16-sdk-exit-drain-windows-race.zh.md: 8ac51ff9195fbece602fed85c7a3436cdac0632a

@@ -3,8 +3,9 @@
 // deferred-controlled timing). Streams are hand pumps: pushMux/pushHost.
 import type {
   ClientResponse, HostFrame, IApiClient, ModelSelection, MuxFrame,
-  RpcError, RpcReceipt, RpcRequest, RpcResponse, SessionId, SessionModels, SessionSearchItem, SkillEntry,
-  WorkspaceId, WorkspaceView,
+  PipelineDetailView, PipelineId, PipelineJobView, PipelineNodeStatus, PipelineProjectView,
+  PipelineStateView, PipelineSummaryView, RpcError, RpcReceipt, RpcRequest, RpcResponse, SessionId,
+  SessionModels, SessionSearchItem, SkillEntry, WorkspaceId, WorkspaceView,
 } from '@deepseek-ai/dsh-api-remotes/client'
 import { RpcId } from '@deepseek-ai/dsh-client-connection/client'
 import type { SessionRemotes } from '../src/client/sessions/remotes.ts'
@@ -18,6 +19,21 @@ function fakeWorkspace(id: string, over: Partial<WorkspaceView> = {}): Workspace
     sessionIds: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
+    ...over,
+  }
+}
+
+/** Programmable-default pipeline detail row for pipeline.get. */
+function fakePipeline(over: Partial<PipelineDetailView> = {}): PipelineDetailView {
+  return {
+    pipelineId: 'pipe-1' as PipelineId,
+    projectId: 'proj-1' as PipelineDetailView['projectId'],
+    name: '管线',
+    status: 1,
+    isLooping: false,
+    prd: { version: 'v1', content: 'PRD' },
+    states: [],
+    jobs: [],
     ...over,
   }
 }
@@ -103,6 +119,12 @@ export class FakeApiClient implements IApiClient {
     () => Promise.resolve(ok({ attachment: { attachmentId: 'a' as never, mediaType: 'image/png', bytes: 1, width: 1, height: 1 }, data: 'AA==' }))
   onUpdateQueue: (payload: unknown) => Promise<RpcResponse<{ accepted: true }>> = () => Promise.resolve(ok({ accepted: true as const }))
   onCancel: (payload: unknown) => Promise<RpcResponse<{ accepted: true }>> = () => Promise.resolve(ok({ accepted: true as const }))
+  onTagsList: (payload: { sessionId: SessionId }) => Promise<RpcResponse<{ tags: string[] }>> =
+    () => Promise.resolve(ok({ tags: [] }))
+  onTagsSet: (payload: { sessionId: SessionId; tags: string[] }) => Promise<RpcResponse<{ tags: string[] }>> =
+    payload => Promise.resolve(ok({ tags: payload.tags }))
+  onTagsRemove: (payload: { sessionId: SessionId; tags: string[] }) => Promise<RpcResponse<{ tags: string[] }>> =
+    () => Promise.resolve(ok({ tags: [] }))
 
   onDescribe: (payload: unknown) => Promise<RpcResponse<{
     version: string
@@ -156,6 +178,11 @@ export class FakeApiClient implements IApiClient {
     attachment: (payload: unknown) => this.record('session.attachment', payload, this.onAttachment(payload)),
     updateQueue: (payload: unknown) => this.record('session.updateQueue', payload, this.onUpdateQueue(payload)),
     cancel: (payload: unknown) => this.record('session.cancel', payload, this.onCancel(payload)),
+    tags: {
+      list: (payload: unknown) => this.record('session.tags.list', payload, this.onTagsList(payload as { sessionId: SessionId })),
+      set: (payload: unknown) => this.record('session.tags.set', payload, this.onTagsSet(payload as { sessionId: SessionId; tags: string[] })),
+      remove: (payload: unknown) => this.record('session.tags.remove', payload, this.onTagsRemove(payload as { sessionId: SessionId; tags: string[] })),
+    },
   }
 
   onSubagentList: (payload: unknown) => Promise<RpcResponse<{ entries: never[]; parentAvailable: boolean }>>
@@ -220,6 +247,34 @@ export class FakeApiClient implements IApiClient {
       this.record('workspace.insertSessionBefore', payload, this.onWorkspaceInsertSessionBefore(payload)),
     archiveSession: (payload: unknown) =>
       this.record('workspace.archiveSession', payload, this.onWorkspaceArchiveSession(payload)),
+  }
+
+  onPipelineListProjects: (payload: unknown) => Promise<RpcResponse<{ projects: PipelineProjectView[] }>> =
+    () => Promise.resolve(ok({ projects: [] }))
+  onPipelineListPipelines: (payload: unknown) => Promise<RpcResponse<{ pipelines: PipelineSummaryView[] }>> =
+    () => Promise.resolve(ok({ pipelines: [] }))
+  onPipelineGet: (payload: unknown) => Promise<RpcResponse<{ pipeline: PipelineDetailView }>> =
+    () => Promise.resolve(ok({ pipeline: fakePipeline() }))
+  onPipelinePushPrd: (payload: unknown) => Promise<RpcResponse<{ pipelineId: PipelineId; prdVersion: string }>> =
+    payload => Promise.resolve(ok({ pipelineId: (payload as { pipelineId: PipelineId }).pipelineId, prdVersion: 'v1' }))
+  onPipelineApprove: (payload: unknown) => Promise<RpcResponse<{ pipelineId: PipelineId; status: PipelineNodeStatus }>> =
+    payload => Promise.resolve(ok({ pipelineId: (payload as { pipelineId: PipelineId }).pipelineId, status: 2 }))
+  onPipelineRerun: (payload: unknown) => Promise<RpcResponse<{ pipelineId: PipelineId; resetCount: number }>> =
+    payload => Promise.resolve(ok({ pipelineId: (payload as { pipelineId: PipelineId }).pipelineId, resetCount: 1 }))
+  onPipelineListStates: (payload: unknown) => Promise<RpcResponse<{ states: PipelineStateView[] }>> =
+    () => Promise.resolve(ok({ states: [] }))
+  onPipelineListJobs: (payload: unknown) => Promise<RpcResponse<{ jobs: PipelineJobView[] }>> =
+    () => Promise.resolve(ok({ jobs: [] }))
+
+  readonly pipeline: IApiClient['pipeline'] = {
+    listProjects: (payload: unknown) => this.record('pipeline.listProjects', payload, this.onPipelineListProjects(payload)),
+    listPipelines: (payload: unknown) => this.record('pipeline.listPipelines', payload, this.onPipelineListPipelines(payload)),
+    get: (payload: unknown) => this.record('pipeline.get', payload, this.onPipelineGet(payload)),
+    pushPrd: (payload: unknown) => this.record('pipeline.pushPrd', payload, this.onPipelinePushPrd(payload)),
+    approve: (payload: unknown) => this.record('pipeline.approve', payload, this.onPipelineApprove(payload)),
+    rerun: (payload: unknown) => this.record('pipeline.rerun', payload, this.onPipelineRerun(payload)),
+    listStates: (payload: unknown) => this.record('pipeline.listStates', payload, this.onPipelineListStates(payload)),
+    listJobs: (payload: unknown) => this.record('pipeline.listJobs', payload, this.onPipelineListJobs(payload)),
   }
 
   // Payloads stay `unknown` (lint-lane note above); response rows are the real

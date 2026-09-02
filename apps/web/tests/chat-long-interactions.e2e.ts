@@ -80,10 +80,10 @@ async function openSeed(page: Page): Promise<void> {
   // The compact layout dropped group session counts; the seeded baseline is
   // the Ungrouped bucket once cold summaries load.
   await page.getByText('Ungrouped', { exact: true }).waitFor({ timeout: 30_000 })
-  // Search collapsed into a header action; expand it before filling.
-  const searchButton = page.getByRole('button', { name: 'Search sessions' })
-  if (await searchButton.getAttribute('aria-expanded') !== 'true') await searchButton.click()
-  const search = page.getByRole('textbox', { name: 'Search sessions...', exact: true })
+  // Search lives in the shell's shared box; focus it before filling.
+  const searchButton = page.getByRole('button', { name: 'Search', exact: true })
+  await searchButton.click()
+  const search = page.getByRole('textbox', { name: 'Search sessions or pipelines…', exact: true })
   await search.fill(FIXTURE.markers.user(1))
   const results = page.getByRole('tree', { name: 'Search results' }).getByRole('treeitem')
   await results.first().waitFor({ timeout: 60_000 })

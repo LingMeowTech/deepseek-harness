@@ -32,6 +32,7 @@ function listStore() {
     phase: 'ready',
     subagentsByParent: {}, jobsBySession: {},
     currentAddress: undefined,
+    tagsBySession: {},
   })
 }
 

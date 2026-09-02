@@ -127,4 +127,21 @@ export interface ISessions {
    * @returns binding, or undefined for a session neither listed nor already scoped.
    */
   binding(id: SessionId): SessionBinding | undefined
+  /**
+   * Replace one session's complete durable tag list. The Host publishes
+   * `host/session-tags-changed` after the commit and that frame alone drives
+   * every surface's refresh — callers never update the view locally.
+   * @param sessionId - the tagged session.
+   * @param tags - the complete replacement list, in display order.
+   * @throws when the Host rejects the write.
+   */
+  setSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void>
+  /**
+   * Remove named durable tags from one session. Like
+   * {@link setSessionTags}, the Host's changed frame is the only refresh path.
+   * @param sessionId - the tagged session.
+   * @param tags - tag names to remove.
+   * @throws when the Host rejects the write.
+   */
+  removeSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void>
 }

@@ -7,6 +7,7 @@
 import type { SessionsApi } from './sessions.ts'
 import type { HostApi } from './host.ts'
 import type { WorkspaceApi } from './workspace.ts'
+import type { PipelineApi } from './pipeline.ts'
 import type { AgentPresetsApi } from './agent-presets.ts'
 import type { SkillsApi } from './skills.ts'
 import type { SubagentsApi } from './subagents.ts'
@@ -24,6 +25,7 @@ export interface ApiProxy {
   subagents: SubagentsApi
   host: HostApi
   workspace: WorkspaceApi
+  pipeline: PipelineApi
   skills: SkillsApi
   agentPresets: AgentPresetsApi
   events: EventsApi
@@ -54,6 +56,11 @@ export type {
 } from './subagents.ts'
 export type { JobView } from './jobs.ts'
 export type { WorkspaceApi, WorkspaceId, WorkspaceView } from './workspace.ts'
+export type {
+  PipelineApi, PipelineDetailView, PipelineId, PipelineJobId, PipelineJobView,
+  PipelineNodeStatus, PipelinePrdView, PipelineProjectId, PipelineProjectView,
+  PipelineStateId, PipelineStateView, PipelineSummaryView,
+} from './pipeline.ts'
 export type { SkillsApi, SkillEntry } from './skills.ts'
 export type { AgentPresetsApi, AgentPresetEntry } from './agent-presets.ts'
 export type { EventsApi, MuxFrame, HostFrame, QueuedInboxItem, ToolCallView, ToolEventView, ToolResultView } from './events.ts'

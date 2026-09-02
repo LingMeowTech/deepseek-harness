@@ -43,7 +43,13 @@ export async function runJsonrpcAgent(bareModuleBaseUrl?: string): Promise<void>
     exiting = true
     try {
       await ctx.fiber.dispose()
-    } finally {
+      process.exitCode = code
+      // Let Node drain native handles (Windows libuv UV_HANDLE_CLOSING)
+      // instead of process.exit() cutting them short after a successful teardown.
+      if (!process.stdin.destroyed) process.stdin.destroy()
+      if (!process.stdout.writableEnded) process.stdout.end()
+    } catch {
+      // A failed tree cannot be assumed quiescent; force the requested status.
       process.exit(code)
     }
   }

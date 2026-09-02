@@ -61,10 +61,32 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
       />
     </button>
     <div
+      class="searchRow"
+    >
+      <button
+        aria-label="Search"
+        class="iconButton railSearch"
+        type="button"
+      >
+        <svg
+          data-content="4ca56c6d"
+          fill="none"
+          height="18"
+          viewBox="0 0 16 16"
+          width="18"
+          xmlns="http://www.w3.org/2000/svg"
+        />
+      </button>
+    </div>
+    <div
       class="regionArea"
     >
       <div
         data-slot="sidebar.workspaces"
+        style="display: contents;"
+      />
+      <div
+        data-slot="sidebar.pipelines"
         style="display: contents;"
       />
     </div>
@@ -187,10 +209,43 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
       </span>
     </button>
     <div
+      class="searchRow"
+    >
+      <div
+        class="search wide"
+      >
+        <button
+          aria-label="Search"
+          class="searchButton"
+          type="button"
+        >
+          <svg
+            data-content="4ca56c6d"
+            fill="none"
+            height="14"
+            viewBox="0 0 16 16"
+            width="14"
+            xmlns="http://www.w3.org/2000/svg"
+          />
+        </button>
+        <input
+          class="searchInput"
+          maxlength="500"
+          placeholder="Search sessions or pipelines…"
+          type="text"
+          value=""
+        />
+      </div>
+    </div>
+    <div
       class="regionArea"
     >
       <div
         data-slot="sidebar.workspaces"
+        style="display: contents;"
+      />
+      <div
+        data-slot="sidebar.pipelines"
         style="display: contents;"
       />
     </div>
@@ -313,10 +368,43 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
       </span>
     </button>
     <div
+      class="searchRow"
+    >
+      <div
+        class="search wide"
+      >
+        <button
+          aria-label="搜索"
+          class="searchButton"
+          type="button"
+        >
+          <svg
+            data-content="4ca56c6d"
+            fill="none"
+            height="14"
+            viewBox="0 0 16 16"
+            width="14"
+            xmlns="http://www.w3.org/2000/svg"
+          />
+        </button>
+        <input
+          class="searchInput"
+          maxlength="500"
+          placeholder="搜索会话或管线…"
+          type="text"
+          value=""
+        />
+      </div>
+    </div>
+    <div
       class="regionArea"
     >
       <div
         data-slot="sidebar.workspaces"
+        style="display: contents;"
+      />
+      <div
+        data-slot="sidebar.pipelines"
         style="display: contents;"
       />
     </div>

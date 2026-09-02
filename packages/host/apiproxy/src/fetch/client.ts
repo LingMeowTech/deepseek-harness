@@ -29,6 +29,9 @@ import {
   sessionRenameValueSchema,
   sessionSearchValueSchema,
   sessionSelectModelValueSchema,
+  sessionTagsListValueSchema,
+  sessionTagsRemoveValueSchema,
+  sessionTagsSetValueSchema,
   sessionUpdateQueueValueSchema,
 } from '../api/sessions.schema.ts'
 import {
@@ -40,6 +43,16 @@ import {
   workspaceListValueSchema,
   workspaceRenameValueSchema,
 } from '../api/workspace.schema.ts'
+import {
+  pipelineApproveValueSchema,
+  pipelineGetValueSchema,
+  pipelineListJobsValueSchema,
+  pipelineListPipelinesValueSchema,
+  pipelineListProjectsValueSchema,
+  pipelineListStatesValueSchema,
+  pipelinePushPrdValueSchema,
+  pipelineRerunValueSchema,
+} from '../api/pipeline.schema.ts'
 import { skillListValueSchema } from '../api/skills.schema.ts'
 import {
   agentPresetCopyValueSchema, agentPresetListValueSchema, agentPresetOpenDocumentValueSchema,
@@ -100,6 +113,11 @@ export interface IApiClient {
     attachment(payload: RequestPayload<'session.attachment'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'session.attachment'>>>
     updateQueue(payload: RequestPayload<'session.updateQueue'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'session.updateQueue'>>>
     cancel(payload: RequestPayload<'session.cancel'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'session.cancel'>>>
+    tags: {
+      list(payload: RequestPayload<'session.tags.list'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'session.tags.list'>>>
+      set(payload: RequestPayload<'session.tags.set'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'session.tags.set'>>>
+      remove(payload: RequestPayload<'session.tags.remove'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'session.tags.remove'>>>
+    }
   }
   subagents: {
     list(payload: RequestPayload<'subagent.list'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'subagent.list'>>>
@@ -124,6 +142,16 @@ export interface IApiClient {
     insertBefore(payload: RequestPayload<'workspace.insertBefore'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.insertBefore'>>>
     insertSessionBefore(payload: RequestPayload<'workspace.insertSessionBefore'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.insertSessionBefore'>>>
     archiveSession(payload: RequestPayload<'workspace.archiveSession'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.archiveSession'>>>
+  }
+  pipeline: {
+    listProjects(payload: RequestPayload<'pipeline.listProjects'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'pipeline.listProjects'>>>
+    listPipelines(payload: RequestPayload<'pipeline.listPipelines'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'pipeline.listPipelines'>>>
+    get(payload: RequestPayload<'pipeline.get'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'pipeline.get'>>>
+    pushPrd(payload: RequestPayload<'pipeline.pushPrd'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'pipeline.pushPrd'>>>
+    approve(payload: RequestPayload<'pipeline.approve'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'pipeline.approve'>>>
+    rerun(payload: RequestPayload<'pipeline.rerun'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'pipeline.rerun'>>>
+    listStates(payload: RequestPayload<'pipeline.listStates'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'pipeline.listStates'>>>
+    listJobs(payload: RequestPayload<'pipeline.listJobs'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'pipeline.listJobs'>>>
   }
   skills: {
     list(payload: RequestPayload<'skill.list'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'skill.list'>>>
@@ -186,6 +214,9 @@ const UNARY_VALUE_SCHEMAS: { [K in keyof RpcMethodMap]: z.ZodType<Wire<ResponseV
   'session.attachment': sessionAttachmentValueSchema,
   'session.updateQueue': sessionUpdateQueueValueSchema,
   'session.cancel': sessionCancelValueSchema,
+  'session.tags.list': sessionTagsListValueSchema,
+  'session.tags.set': sessionTagsSetValueSchema,
+  'session.tags.remove': sessionTagsRemoveValueSchema,
   'subagent.list': subagentListValueSchema,
   'subagent.history': subagentHistoryValueSchema,
   'subagent.prompt': subagentPromptValueSchema,
@@ -204,6 +235,14 @@ const UNARY_VALUE_SCHEMAS: { [K in keyof RpcMethodMap]: z.ZodType<Wire<ResponseV
   'workspace.insertBefore': workspaceInsertBeforeValueSchema,
   'workspace.insertSessionBefore': workspaceInsertSessionBeforeValueSchema,
   'workspace.archiveSession': workspaceArchiveSessionValueSchema,
+  'pipeline.listProjects': pipelineListProjectsValueSchema,
+  'pipeline.listPipelines': pipelineListPipelinesValueSchema,
+  'pipeline.get': pipelineGetValueSchema,
+  'pipeline.pushPrd': pipelinePushPrdValueSchema,
+  'pipeline.approve': pipelineApproveValueSchema,
+  'pipeline.rerun': pipelineRerunValueSchema,
+  'pipeline.listStates': pipelineListStatesValueSchema,
+  'pipeline.listJobs': pipelineListJobsValueSchema,
   'skill.list': skillListValueSchema,
   'agentPreset.list': agentPresetListValueSchema,
   'agentPreset.select': agentPresetSelectValueSchema,
@@ -428,6 +467,11 @@ export abstract class AbstractApiClient implements IApiClient {
     attachment: (payload, signal) => this.callUnary('session.attachment', payload, signal),
     updateQueue: (payload, signal) => this.callUnary('session.updateQueue', payload, signal),
     cancel: (payload, signal) => this.callUnary('session.cancel', payload, signal),
+    tags: {
+      list: (payload, signal) => this.callUnary('session.tags.list', payload, signal),
+      set: (payload, signal) => this.callUnary('session.tags.set', payload, signal),
+      remove: (payload, signal) => this.callUnary('session.tags.remove', payload, signal),
+    },
   }
 
   readonly subagents: IApiClient['subagents'] = {
@@ -459,6 +503,17 @@ export abstract class AbstractApiClient implements IApiClient {
     insertBefore: (payload, signal) => this.callUnary('workspace.insertBefore', payload, signal),
     insertSessionBefore: (payload, signal) => this.callUnary('workspace.insertSessionBefore', payload, signal),
     archiveSession: (payload, signal) => this.callUnary('workspace.archiveSession', payload, signal),
+  }
+
+  readonly pipeline: IApiClient['pipeline'] = {
+    listProjects: (payload, signal) => this.callUnary('pipeline.listProjects', payload, signal),
+    listPipelines: (payload, signal) => this.callUnary('pipeline.listPipelines', payload, signal),
+    get: (payload, signal) => this.callUnary('pipeline.get', payload, signal),
+    pushPrd: (payload, signal) => this.callUnary('pipeline.pushPrd', payload, signal),
+    approve: (payload, signal) => this.callUnary('pipeline.approve', payload, signal),
+    rerun: (payload, signal) => this.callUnary('pipeline.rerun', payload, signal),
+    listStates: (payload, signal) => this.callUnary('pipeline.listStates', payload, signal),
+    listJobs: (payload, signal) => this.callUnary('pipeline.listJobs', payload, signal),
   }
 
   readonly skills: IApiClient['skills'] = {

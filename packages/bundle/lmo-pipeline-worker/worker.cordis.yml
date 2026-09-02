@@ -1,0 +1,298 @@
+# The lmo-pipeline-worker flat composition for the frozen runner handshake:
+# the Go runner spawns the built `dsh-jsonrpc-agent` executable with
+# DSH_CORDIS_CONFIG=<this file> (or passes it as argv[1]). One pipeline job =
+# one worker process; the worker speaks stdio JSON-RPC
+# (initialize / session/prompt / shutdown; session.event / session.status /
+# subagent.started / subagent.finished) and streams progress through
+# session.event. Structured results go to <worktree>/.lmo/output.json.
+#
+# Environment contract (injected by the runner, read-only):
+#   PIPELINE_ID / STATE_ID / JOB_ID / NODE_ID   pipeline identity
+#   LMO_WORKTREE_PATH                            job worktree (= DSH_CWD)
+#   LMO_REPO / LMO_BRANCH                        target repo and branch
+#   LMO_SERVER_HOST / LMO_SERVER_SECRET_ID / LMO_SERVER_SECRET_KEY
+#   DSH_WORKER_PROFILE                            this profile's name
+# Deployment seams:
+#   DSH_CWD                 workspace cwd (defaults to process.cwd())
+#   DSH_SESSION_ROOT        session persistence root (defaults to $DSH_HOME/sessions)
+#   DSH_LMTECH_SKILL_DIRS   JSON array of extra lmtech skill roots
+#   DSH_WORKER_SUBAGENT_BIN / DSH_WORKER_SUBAGENT_ARGS   dsh-sdk child runtime
+#                           (the built dsh-jsonrpc-agent + this same file, or
+#                           a node launcher pair in development)
+#   DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL / DSH_PROVIDER / DSH_MODEL
+# stdout is reserved for JSON-RPC; nothing here adds a console logger.
+
+- id: sdk-jsonrpc-server
+  name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
+  config:
+    maxTokensAsSuccess: false
+    agentPreset: pipeline-worker
+
+# The DeepSeek adapter; the model arrives per session over JSON-RPC.
+- id: llm-deepseek
+  name: '@deepseek-ai/dsh-llm-deepseek'
+  config:
+    thinking: enabled
+    reasoningEffort: max
+
+# Per-session agent presets: pipeline sessions are composed from the dedicated
+# pipeline-worker preset (based on code/Code Router) instead of bypassing the
+# normal session creation flow.
+- id: agent-presets
+  name: '@deepseek-ai/dsh-agent-presets'
+  config:
+    default: pipeline-worker
+    roots:
+      - path: C:/Users/miao/Projects/LingMiaoTech/deepseek-harness/worktree/dev-20260815-s4/apps/cli/config/agent-presets
+        trust: system
+    includeUserRoot: true
+
+# Managed child-process groups for the shell executors.
+- id: subprocess
+  name: '@deepseek-ai/dsh-subprocess-local'
+
+# Shell backends: bash on POSIX, pwsh on Windows.
+- id: bash
+  name: '@deepseek-ai/dsh-bash-local'
+  disabled: !!js process.platform === 'win32'
+  config:
+    cwd: !!js process.env.DSH_CWD ?? process.cwd()
+    timeoutMs: 60000
+
+- id: pwsh
+  name: '@deepseek-ai/dsh-pwsh-local'
+  disabled: !!js process.platform !== 'win32'
+  config:
+    cwd: !!js process.env.DSH_CWD ?? process.cwd()
+    timeoutMs: 60000
+
+# The shared agent spine; persona pins the frozen execution/decompose
+# workflows, and skills.filesystem adds the lmtech knowledge roots.
+- id: agent-spine
+  name: '@deepseek-ai/dsh-agent-spine-demo'
+  config:
+    includeHarnessIdentity: false
+    includeRuntimeContext: false
+    workspaceContext:
+      maxBytes: 65537
+    skills:
+      enabled: true
+      filesystem:
+        includeDefaultRoots: true
+        customSkillDirs: !!js JSON.parse(process.env.DSH_LMTECH_SKILL_DIRS || '["C:/Users/miao/Projects/LingMiaoTech/HermesAgentSkills/lmtech/skills"]')
+    toolBash:
+      enableRunInBackground: true
+    toolJobs: {}
+    persona: |-
+      你是 lmo pipeline 研发管线的 DSH 执行 worker（一个 pipeline job = 一个独立 DSH worker 进程）。
+      环境注入（只读，不反向猜测节点身份）：
+      - PIPELINE_ID / STATE_ID / JOB_ID / NODE_ID：当前 job 的管线身份
+      - LMO_WORKTREE_PATH：job worktree（工作目录）；LMO_REPO / LMO_BRANCH：目标仓库与分支
+      - LMO_SERVER_HOST / LMO_SERVER_SECRET_ID / LMO_SERVER_SECRET_KEY：lmo-server HMAC 凭据
+      - DSH_WORKER_PROFILE：本 worker profile
+      你的 prompt 由 runner 注入：PRD（若有）+ pipeline_id/stage/工作目录/repo/上游流转输入 + job command（自包含可执行指令）。
+
+      执行工作流（job command 为自包含执行指令时按此执行，严格按序）：
+      1. 读 PRD/autoPlan 与接力标记 docs/relay-*.md（如有），明确本 job 目标/文件范围/验证方式；
+         用 pipeline 工具 pipeline_get 读取当前节点与 payload（input_spec/output_spec），确认输入与出口规范；
+      2. 确定 worktree：默认 LMO_WORKTREE_PATH；git 操作遵守 Git 工作流（独立分支、提交前 git status/git diff 检查、
+         只 git add 本 job 文件、dev-* 可推送、不自动合并 main）；
+      3. 严格按 TDD 执行：RED（先写失败测试）→ GREEN（最小实现转绿）→ REFACTOR（清理并验证）；
+      4. Git 分步提交：每完成一个可验证单元提交一次，标题格式 [{Tag}] 简短描述（Tag 取 [Add]/[Feature]/[Update]/[Fix] 等），
+         正文使用项目符号（- 开头）逐条列出变更详情；
+      5. 验证：跑对应质量闸门（Node/pnpm 项目：pnpm exec tsc -b <受影响包> → pnpm --filter <包名> test → pnpm run lint；
+         Go 项目：go build ./... → go vet ./... → go test ./...）全绿后才进入收尾；
+      6. 回写 AutoPlan：在目标仓库 docs/autoPlan/{YYYY}/{MM}/{DD}/ 追加/更新本 job 执行记录（分支/commit/验证结论）；
+      7. 收尾（按序）：
+         a. 通过 pipeline 工具 pipeline_report_node 上报本节点执行状态；
+         b. 把结构化结果写入 worktree 根目录 .lmo/output.json，格式：
+            {"result":[{"type":"<类型>","value":<任意 JSON>,"name":"<可选>","note":"<可选>"}]}
+            type 支持 string/number/bool/url/file/json/csv/markdown/node；job 成功时必写，失败时写 {"error":"<原因>"}；
+         c. 每完成一步输出一句进度（这些输出经 SDK session.event 流式传给 runner）。
+
+      分解工作流（job command 为「分解」类任务时按此执行，严格按序）：
+      1. 读 skill/issue/PRD：调用 lmtech skill 读取项目知识/开发规范/可用工具（lmo_server_api.py 等）；
+         读取当前 pipeline 信息：pipeline 工具 pipeline_get / pipeline_prd / pipeline_states / pipeline_jobs，
+         另读目标仓库 docs/PRD.md、docs/autoPlan/**、docs/relay-*.md（如有）；issue 引用（完整链接）若提供则经
+         lmo_server_api.py gitea comment 追加结构化开始上报；
+      2. PRD TDD 验收：按 TDD 流程产出/增量更新 PRD（需求目标/范围/RED-GREEN-REFACTOR 验收），写入目标仓库 PRD.md；
+      3. AutoPlan 写盘：根据 PRD 分解需求，生成 AutoPlan（bite-sized 实施步骤，含每步命令与验证方式），
+         写入目标仓库 docs/autoPlan/{YYYY}/{MM}/{DD}/；
+      4. 拆 state/job：基于 AutoPlan 把需求拆成可执行子任务，经 lmtech skill 的 lmo_server_api.py 业务接口创建：
+         - 建 state：pipeline state create --pipeline-id <id> --name <名称> --desc-text <自包含需求>
+           [--previous-id <前驱 id，逗号分隔，有先后依赖才填>] [--entry|--exit]
+           （入口 state 标记 --entry 并写 input_spec，出口 state 标记 --exit 并写 output_spec；数据规范
+           {"result":[{"type":"<类型>","value":...,"name":"<可选>","note":"<可选>"}]}，type 支持
+           string/number/bool/url/file/json/csv/markdown/node）；
+         - 建 job：pipeline job create --state-id <state_id> --name <名称> --command "<自包含可执行指令
+           （含工作目录/脚本/skill 路径/输入/期望输出/验证方式）>" [--previous-id <前驱 id>]；
+         - 相互独立的子任务拆成独立并行 job，彼此不加边（runner 并发执行）；有先后依赖才加边（DAG）；
+         - 依赖补建：pipeline dependency add --node <后继 id> --depends-on <前驱 id>（内部实现为建边）；
+         - 大型复杂阶段先建 state（可再分解）；叶子一律 type=job（desc_text 自包含，runner 不再分解，直接以 desc_text 执行）；
+      5. issue 上报：经 lmo_server_api.py gitea comment 按固定格式向 issue 追加开始上报（5 行，EndTime 填「-」）：
+      🚀 Pipeline: {pipeline name}
+      📍 State: {state name}
+      🛠️ Job: {job name}
+      ⏰ StartTime: {YYYY-MM-DD HH:MM UTC+8}
+      ✅ EndTime: -
+      6. 完成后在目标仓库 docs/relay-*.md 写入分解记录（状态/子节点清单/commit），并按执行工作流第 7 步收尾
+         （pipeline_report_node + .lmo/output.json + 流式进度）。
+
+      通用纪律：
+      - 语言：所有推理/思考/解释/回复使用中文（代码、命令、路径、标识符、JSON 字段除外）；
+      - 所有文件操作只在 worktree（LMO_WORKTREE_PATH）内进行；不在 worktree 外写文件（.lmo/output.json 除外，它位于 worktree 根）；
+      - 子任务并行时经 subagent 工具委派子 agent（dsh-sdk 后端为独立进程），并收集 report；
+      - 结束后必须产出 .lmo/output.json（成功/失败都要有），否则 runner 视为异常。
+
+# The pwsh-facing tool the spine does not own (spine owns the bash tool).
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+# Shared session persistence root: the frozen session contract's single
+# source of truth (DSH_HOME/sessionPersistence); DSH_SESSION_ROOT overrides.
+- id: sessions
+  name: '@deepseek-ai/dsh-session-persistence-jsonl'
+  config:
+    root: !!js process.env.DSH_SESSION_ROOT ?? dshHomePath('sessions')
+
+- id: session-checkpoints
+  name: '@deepseek-ai/dsh-session-checkpoint-policy'
+
+# Subagent seam: in-process spawn/fork plus the out-of-process dsh-sdk backend.
+- id: subagent
+  name: '@deepseek-ai/dsh-subagent'
+
+- id: subagent-spawn-in-process
+  name: '@deepseek-ai/dsh-subagent-spawn-in-process'
+  config:
+    providerName: spawn
+
+- id: subagent-fork-in-process
+  name: '@deepseek-ai/dsh-subagent-fork-in-process'
+  config:
+    providerName: fork
+
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    enableRunInBackground: true
+
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+
+# Optional direct-child return channel.
+- id: tool-subagent-report
+  name: '@deepseek-ai/dsh-tool-subagent-report'
+
+- id: subagent-dsh-sdk
+  name: '@deepseek-ai/dsh-subagent-dsh-sdk'
+  config:
+    providerName: dsh-sdk
+    command: !!js process.env.DSH_WORKER_SUBAGENT_BIN ?? 'node'
+    args: !!js JSON.parse(process.env.DSH_WORKER_SUBAGENT_ARGS ?? '[]')
+    provider: !!js process.env.DSH_PROVIDER ?? 'deepseek-official'
+    model: !!js process.env.DSH_MODEL ?? 'deepseek-v4-flash'
+    env:
+      DEEPSEEK_API_KEY: !!js process.env.DEEPSEEK_API_KEY ?? ''
+      DEEPSEEK_BASE_URL: !!js process.env.DEEPSEEK_BASE_URL ?? ''
+      # The child boots this same worker.cordis.yml; its lmo-pipeline row
+      # needs the runner-injected LMO credentials (scrubbed from ambient env
+      # by the SDK child launcher, so each name is forwarded explicitly).
+      LMO_SERVER_HOST: !!js process.env.LMO_SERVER_HOST ?? ''
+      LMO_SERVER_SECRET_ID: !!js process.env.LMO_SERVER_SECRET_ID ?? ''
+      LMO_SERVER_SECRET_KEY: !!js process.env.LMO_SERVER_SECRET_KEY ?? ''
+      DSH_SESSION_ROOT: !!js process.env.DSH_SESSION_ROOT ?? ''
+      DSH_LMTECH_SKILL_DIRS: !!js process.env.DSH_LMTECH_SKILL_DIRS ?? ''
+
+- id: tool-subagent-dsh-sdk
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: dsh-sdk
+    toolName: subagent_dsh
+    enableRunInBackground: true
+    maxDepth: provider-managed
+
+# Durable session-tag storage + the pipeline tag writer.
+- id: storage
+  name: '@deepseek-ai/dsh-storage'
+
+- id: storage-json
+  name: '@deepseek-ai/dsh-storage-json'
+  config:
+    root: !!js dshHomePath('storages')
+
+- id: storage-domain
+  name: '@deepseek-ai/dsh-storage-domain'
+  config:
+    backend: json
+
+- id: session-tags
+  name: '@deepseek-ai/dsh-session-tags'
+
+- id: pipeline-worker-tags
+  name: '@deepseek-ai/dsh-bundle-lmo-pipeline-worker/pipeline-worker-tags'
+
+# LMO pipeline seam: HTTP provider + model-facing pipeline_* tools.
+- id: lmo-pipeline
+  name: '@deepseek-ai/dsh-lmo-pipeline-http'
+
+- id: tool-lmo-pipeline
+  name: '@deepseek-ai/dsh-tool-lmo-pipeline'
+
+# The bare local filesystem over the job worktree.
+- id: fs-local
+  name: '@deepseek-ai/dsh-fs-local'
+  config:
+    cwd: !!js process.env.DSH_CWD ?? process.cwd()
+
+- id: fs-observation-policy
+  name: '@deepseek-ai/dsh-fs-observation-policy'
+
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+- id: tool-str-replace-editor
+  name: '@deepseek-ai/dsh-tool-str-replace-editor'
+  config:
+    maxOutputChars: 16000
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+- id: token-meter
+  name: '@deepseek-ai/dsh-token-meter'
+
+- id: compaction-basic
+  name: '@deepseek-ai/dsh-compaction-basic'
+  config:
+    thresholdRatio: 0.8
+    retainRatio: 0.16
+    maxTokens: 8192
+    compactionRetries: 1
+
+# Persistent terminal on POSIX hosts; Windows has no shipped terminal backend.
+- id: pty
+  name: '@deepseek-ai/dsh-terminal'
+
+- id: terminal-bash
+  name: '@deepseek-ai/dsh-terminal-bash'
+  disabled: !!js process.platform === 'win32'
+  config:
+    timeoutMs: 300000
+
+- id: tool-terminal
+  name: '@deepseek-ai/dsh-tool-terminal'
+  disabled: !!js process.platform === 'win32'

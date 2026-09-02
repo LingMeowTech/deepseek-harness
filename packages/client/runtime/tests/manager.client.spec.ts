@@ -1208,3 +1208,82 @@ describe('background-job mirror', () => {
     expect(seen).toHaveBeenCalled()
   })
 })
+
+describe('session tags', () => {
+  it('pulls tags per listed session after each list refresh', async () => {
+    const api = new FakeApiClient()
+    api.onList = () => Promise.resolve(ok({ items: [summary(S1), summary(S2)] as never[] }))
+    api.onTagsList = ({ sessionId }) => Promise.resolve(ok({
+      tags: sessionId === S1 ? ['pipeline_id', 'state_id'] : [],
+    }))
+    const manager = new SessionManager(api, fakeRemote())
+    await manager.refreshList()
+    await Promise.resolve() // let the per-session tag pulls settle
+    const tags = manager.getListSnapshot().tagsBySession
+    expect(tags[S1]).toEqual(['pipeline_id', 'state_id'])
+    expect(tags[S2]).toEqual([])
+  })
+
+  it('drops a stale tag pull for a session removed while the read was in flight', async () => {
+    const api = new FakeApiClient()
+    api.onList = () => Promise.resolve(ok({ items: [summary(S1)] as never[] }))
+    const gate = deferred<Awaited<ReturnType<FakeApiClient['onTagsList']>>>()
+    api.onTagsList = () => gate.promise
+    const manager = new SessionManager(api, fakeRemote())
+    const refresh = manager.refreshList()
+    await refresh
+    manager.handleHostEnvelope({ rpcId: 'r' as never, payload: { type: 'host/session-removed', sessionId: S1 } })
+    gate.resolve(ok({ tags: ['pipeline_id'] }))
+    await Promise.resolve()
+    expect(S1 in manager.getListSnapshot().tagsBySession).toBe(false)
+  })
+
+  it('updates the tag index from host/session-tags-changed and clears it on removal', () => {
+    const manager = new SessionManager(new FakeApiClient(), fakeRemote())
+    manager.handleHostEnvelope({ rpcId: 'a' as never, payload: { type: 'host/session-added', blank: true, sessionId: S1 } })
+    manager.handleHostEnvelope({
+      rpcId: 't' as never,
+      payload: { type: 'host/session-tags-changed', sessionId: S1, tags: ['pipeline_id', 'node_id'] },
+    })
+    expect(manager.getListSnapshot().tagsBySession[S1]).toEqual(['pipeline_id', 'node_id'])
+    manager.handleHostEnvelope({ rpcId: 'r' as never, payload: { type: 'host/session-removed', sessionId: S1 } })
+    expect(S1 in manager.getListSnapshot().tagsBySession).toBe(false)
+  })
+
+  it('keeps the tags projection reference-stable across unrelated list activity', () => {
+    const api = new FakeApiClient()
+    const manager = new SessionManager(api, fakeRemote())
+    manager.handleHostEnvelope({ rpcId: 'a' as never, payload: { type: 'host/session-added', blank: true, sessionId: S1 } })
+    const before = manager.getListSnapshot().tagsBySession
+    manager.handleHostEnvelope({ rpcId: 's' as never, payload: { type: 'host/session-status', sessionId: S1, running: true } })
+    const after = manager.getListSnapshot().tagsBySession
+    expect(after).toBe(before)
+    manager.handleHostEnvelope({
+      rpcId: 't' as never,
+      payload: { type: 'host/session-tags-changed', sessionId: S1, tags: ['pipeline_id'] },
+    })
+    expect(manager.getListSnapshot().tagsBySession).not.toBe(after)
+  })
+
+  it('writes tags through the wire and never updates the view locally', async () => {
+    const api = new FakeApiClient()
+    const manager = new SessionManager(api, fakeRemote())
+    manager.handleHostEnvelope({ rpcId: 'a' as never, payload: { type: 'host/session-added', blank: true, sessionId: S1 } })
+    await manager.setSessionTags(S1, ['pipeline_id'])
+    expect(api.callsOf('session.tags.set')).toHaveLength(1)
+    // No local echo: the snapshot only moves when the Host changed frame lands.
+    // A cold-start tag pull may have stored the wire's empty tag list, but it
+    // must not contain the tag we just wrote through the Host.
+    expect(manager.getListSnapshot().tagsBySession[S1] ?? []).not.toContain('pipeline_id')
+    await manager.removeSessionTags(S1, ['pipeline_id'])
+    expect(api.callsOf('session.tags.remove')).toHaveLength(1)
+    expect(manager.getListSnapshot().tagsBySession[S1] ?? []).not.toContain('pipeline_id')
+  })
+
+  it('surfaces Host write rejection as an error', async () => {
+    const api = new FakeApiClient()
+    api.onTagsSet = () => Promise.resolve(err({ code: 'session-not-found', message: 'no row', details: { sessionId: S1 } }))
+    const manager = new SessionManager(api, fakeRemote())
+    await expect(manager.setSessionTags(S1, ['pipeline_id'])).rejects.toThrow(/session\.tags\.set failed/)
+  })
+})
