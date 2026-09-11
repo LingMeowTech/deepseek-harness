@@ -691,6 +691,27 @@ inspect( sessionId: SessionId, signal?: AbortSignal, ): Promise<SessionInspectio
 @Remote('list') async list(_request: SessionListRequest, signal: AbortSignal): Promise<SessionListValue>
 
 /**
+ * Read one session's durable tag list (pipeline-zone session filtering).
+ * @param request - session whose tags are read.
+ * @returns the session's durable tag list.
+ */
+@Remote('tagsList') async tagsList(request: SessionTagsListRequest): Promise<SessionTagsListValue>
+
+/**
+ * Replace one session's complete tag list; an empty list clears the row.
+ * @param request - session and the replacement tag list.
+ * @returns the session's durable tag list after the write.
+ */
+@Remote('tagsSet') async tagsSet(request: SessionTagsSetRequest): Promise<SessionTagsSetValue>
+
+/**
+ * Remove the named tags from one session's durable list.
+ * @param request - session and the tags to drop.
+ * @returns the session's durable tag list after the removal.
+ */
+@Remote('tagsRemove') async tagsRemove(request: SessionTagsRemoveRequest): Promise<SessionTagsRemoveValue>
+
+/**
  * Search visible Session content without resuming an Agent.
  * @param request - literal message-content query.
  * @param signal - cancellation for list and search reads.
@@ -800,7 +821,7 @@ inspect( sessionId: SessionId, signal?: AbortSignal, ): Promise<SessionInspectio
 @Remote({ mode: 'stream' }) control(signal: AbortSignal): AsyncIterable<SessionControlFrame>
 ```
 
-Types: [SessionId](core.md) · [SessionInspection](persistence.md) · [SessionSearchRequest](session-query.md)
+Types: [SessionId](core.md) · [SessionInspection](persistence.md) · [SessionSearchRequest](session-query.md) · [SessionTagsListRequest](pipeline.md) · [SessionTagsListValue](pipeline.md) · [SessionTagsRemoveRequest](pipeline.md) · [SessionTagsRemoveValue](pipeline.md) · [SessionTagsSetRequest](pipeline.md) · [SessionTagsSetValue](pipeline.md)
 
 Source: [`packages/api/session-controller/src/index.ts`](../../packages/api/session-controller/src/index.ts)
 

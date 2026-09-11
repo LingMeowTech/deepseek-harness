@@ -172,6 +172,13 @@ export class FakeApiClient {
   onSubagentInterrupt: (payload: unknown) => Promise<RemoteResult<SubagentInterruptReceipt>>
     = () => Promise.resolve(ok({ accepted: true as const }))
 
+  onTagsList: (payload: { sessionId: SessionId }) => Promise<RemoteResult<{ tags: readonly string[] }>>
+    = () => Promise.resolve(ok({ tags: [] }))
+  onTagsSet: (payload: { sessionId: SessionId; tags: readonly string[] }) => Promise<RemoteResult<{ tags: readonly string[] }>>
+    = () => Promise.resolve(ok({ tags: [] }))
+  onTagsRemove: (payload: { sessionId: SessionId; tags: readonly string[] }) => Promise<RemoteResult<{ tags: readonly string[] }>>
+    = () => Promise.resolve(ok({ tags: [] }))
+
   onWorkspaceCreate: (payload: unknown) => Promise<RemoteResult<{ workspace: WorkspaceView; created: boolean }>> =
     () => Promise.resolve(ok({ workspace: fakeWorkspace('fk-ws'), created: true }))
 
@@ -202,6 +209,9 @@ export class FakeApiClient {
       session: {
         canOpenWorkspacePath: () => Promise.resolve(ok(true)),
         list: payload => this.record('session.list', payload, this.onList(payload)),
+        tagsList: payload => this.record('session.tagsList', payload, this.onTagsList(payload)),
+        tagsSet: payload => this.record('session.tagsSet', payload, this.onTagsSet(payload)),
+        tagsRemove: payload => this.record('session.tagsRemove', payload, this.onTagsRemove(payload)),
         modelCatalog: () => Promise.resolve({
           ok: true,
           value: {

@@ -375,6 +375,7 @@ describe('DetailsPanel Output section (search)', () => {
     const sessions = createSnapshotStore<SessionListState>({
       ids: [], byId: {}, current: undefined, phase: 'ready',
       subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
+      tagsBySession: {},
     })
     const session = createSnapshotStore(sessionSnapshot(SID))
     const conversation = createSnapshotStore(conversationSnapshot())

@@ -58,6 +58,8 @@ export interface SessionListSnapshot {
   subagentsByParent: Readonly<Record<SessionId, SubagentCatalogSnapshot>>
   /** Background jobs per session; an absent key is an empty set. */
   jobsBySession: Readonly<Record<SessionId, readonly JobView[]>>
+  /** Durable per-session tags; an absent key is an untagged session. */
+  tagsBySession: Readonly<Record<SessionId, readonly string[]>>
   currentAddress: SubagentAddress | undefined
 }
 
@@ -132,6 +134,14 @@ export class SessionManager {
    * one representation.
    */
   private readonly jobsBySession = new Map<SessionId, readonly JobView[]>()
+  /**
+   * Durable per-session tags, seeded by the cold-start pull and updated
+   * last-wins from `host/session-tags-changed`. Absence means "untagged",
+   * never "unread"; pipeline sessions carry the `pipeline_id` tag.
+   */
+  private readonly tagsBySession = new Map<SessionId, readonly string[]>()
+  /** Reference-stable tags projection (the itemsCache precedent: reused while unchanged). */
+  private tagsSnapshotCache: Readonly<Record<string, readonly string[]>> = {}
 
   private selected: SessionId | undefined
 
@@ -449,6 +459,56 @@ export class SessionManager {
 
   // ---- List API ----
 
+  /**
+   * Replace one session's complete durable tag list. The Host publishes
+   * `host/session-tags-changed` after the commit and that frame alone drives
+   * every surface's refresh — this method writes nothing locally.
+   * @param sessionId - the tagged session.
+   * @param tags - the complete replacement list, in display order.
+   * @throws when the Host rejects the write.
+   */
+  async setSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void> {
+    const res = await this.remote.session.tagsSet({ sessionId, tags: [...tags] })
+    if (!res.ok) {
+      throw new Error(`session.tags.set failed: ${res.error.code}: ${res.error.message}`)
+    }
+  }
+
+  /**
+   * Remove named durable tags from one session; like
+   * {@link setSessionTags}, the Host's changed frame is the only refresh path.
+   * @param sessionId - the tagged session.
+   * @param tags - tag names to remove.
+   * @throws when the Host rejects the write.
+   */
+  async removeSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void> {
+    const res = await this.remote.session.tagsRemove({ sessionId, tags: [...tags] })
+    if (!res.ok) {
+      throw new Error(`session.tags.remove failed: ${res.error.code}: ${res.error.message}`)
+    }
+  }
+
+  /**
+   * Cold-start tag pull: one `session.tags.list` per listed session. A
+   * failed read leaves the row untagged until the next changed frame — tags
+   * are auxiliary to the session list and never fatal to it. A row removed
+   * while a pull is in flight drops the stale response.
+   * @param sessionIds - currently listed sessions.
+   */
+  private refreshTags(sessionIds: readonly SessionId[]): void {
+    for (const sessionId of sessionIds) {
+      this.remote.session.tagsList({ sessionId }).then((res) => {
+        if (!res.ok) return
+        if (!this.summaries.some(summary => summary.sessionId === sessionId)) return
+        this.tagsBySession.set(sessionId, res.value.tags)
+        this.notifier.markDirty()
+      }).catch(() => {
+        // Named swallow: a transient tag read fails open (row shows untagged),
+        // and the next list refresh or changed frame converges it.
+      })
+    }
+  }
+
   /** Full refresh via session.list (single-flight: an in-flight call is reused). */
   refreshList(): Promise<void> {
     if (this.listInflight !== null) return this.listInflight
@@ -460,7 +520,11 @@ export class SessionManager {
     this.notifier.markDirty()
     this.listInflight = (async () => {
       try {
-        const result = await this.remote.session.list({})
+        // Lightweight polling (B17 US2): metadata-only rows. Per-session
+        // projection stores are seeded by history tails and `session/projection`
+        // push frames; seeding here would only rewrite identical watermark
+        // snapshots while making every poll fold 1100+ projection rows on the host.
+        const result = await this.remote.session.list({ projection: 'none' })
         if (result.ok) {
           const baseline: SessionSummary[] = this.listPhase === 'pending'
             ? [...result.value.items]
@@ -492,11 +556,10 @@ export class SessionManager {
             session.handleRunning(s.running)
           }
           // Seed each row's projection baseline into the per-session value
-          // store (cold titles surface without opening the session). Per-key
-          // apply, not seed(): the list block is a partial baseline — the
-          // cold cache serves only version-matching keys — so an absent key
-          // must not clear; higher-seq-wins still keeps a stale list block
-          // from overwriting a newer push frame or tail baseline.
+          // store when the block is present (full v1 rows carry one). The
+          // lightweight baseline serves no projection block; per-session
+          // stores keep their values and stay fed by history tails and
+          // `session/projection` push frames.
           for (const s of result.value.items) {
             const block = s.projections
             if (block === undefined) continue
@@ -504,6 +567,9 @@ export class SessionManager {
             const values = block.values as Record<string, unknown>
             for (const key of Object.keys(values)) store.apply(key, values[key], sessionSeqCursor(block.asOfSeq))
           }
+          // Tags have no list baseline; re-pull per session after every list
+          // refresh and let the changed frame take over between pulls.
+          this.refreshTags(this.summaries.map(summary => summary.sessionId))
         } else {
           this.listState = 'error'
           this.listError = result.error
@@ -626,8 +692,14 @@ export class SessionManager {
 
   /** Apply immediately and retain for replay when a list response is in flight. */
   private recordMutation(mutation: SessionListMutation): void {
+    const sessionId = mutation.kind === 'upsert' ? mutation.summary.sessionId : undefined
+    const existed = sessionId !== undefined && this.summaries.some(s => s.sessionId === sessionId)
     this.listMutations?.push(mutation)
     this.summaries = applyMutation(this.summaries, mutation)
+    // A newly observed session has no tag baseline yet; pull its durable tags
+    // immediately so pipeline-session filtering does not wait for a later
+    // list refresh or a click into the row.
+    if (sessionId !== undefined && !existed) this.refreshTags([sessionId])
     // Eager edge reconciliation — a snapshot-build-time pass would miss consecutive status frames.
     this.syncCompletedNotifications()
     this.notifier.markDirty()
@@ -952,8 +1024,28 @@ export class SessionManager {
       error: this.listError,
       subagentsByParent: Object.fromEntries(this.catalogs),
       jobsBySession: Object.fromEntries(this.jobsBySession),
+      tagsBySession: this.tagsSnapshot(),
       currentAddress: current === undefined ? undefined : this.addresses.get(current),
     }
+  }
+
+  /**
+   * Reference-stable tags projection: the previous object is reused while the
+   * map is unchanged, so consumers selecting `tagsBySession` do not re-render
+   * on unrelated list activity.
+   */
+  private tagsSnapshot(): Readonly<Record<string, readonly string[]>> {
+    if (this.tagsBySession.size !== Object.keys(this.tagsSnapshotCache).length) {
+      this.tagsSnapshotCache = Object.fromEntries(this.tagsBySession)
+      return this.tagsSnapshotCache
+    }
+    for (const [key, value] of this.tagsBySession) {
+      if (this.tagsSnapshotCache[key] !== value) {
+        this.tagsSnapshotCache = Object.fromEntries(this.tagsBySession)
+        return this.tagsSnapshotCache
+      }
+    }
+    return this.tagsSnapshotCache
   }
 }
 
