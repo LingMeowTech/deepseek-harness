@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/lmtech-fork-decisions.md
+lmtech-fork-decisions.md: 6c5dd371020fc6c2145a73314e7dcc11af0c47eb
+lmtech-fork-decisions.zh.md: 65919f2ca304c1f3a1e55b143cf15412646e0051

@@ -1353,6 +1353,24 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'visible Session summaries ordered by activity.',
       },
       {
+        signature: '@Remote(\'tagsList\') async tagsList(request: SessionTagsListRequest): Promise<SessionTagsListValue>',
+        description: 'Read one session\'s durable tag list (pipeline-zone session filtering).',
+        parameters: [{ name: 'request', description: 'session whose tags are read.' }],
+        returns: 'the session\'s durable tag list.',
+      },
+      {
+        signature: '@Remote(\'tagsSet\') async tagsSet(request: SessionTagsSetRequest): Promise<SessionTagsSetValue>',
+        description: 'Replace one session\'s complete tag list; an empty list clears the row.',
+        parameters: [{ name: 'request', description: 'session and the replacement tag list.' }],
+        returns: 'the session\'s durable tag list after the write.',
+      },
+      {
+        signature: '@Remote(\'tagsRemove\') async tagsRemove(request: SessionTagsRemoveRequest): Promise<SessionTagsRemoveValue>',
+        description: 'Remove the named tags from one session\'s durable list.',
+        parameters: [{ name: 'request', description: 'session and the tags to drop.' }],
+        returns: 'the session\'s durable tag list after the removal.',
+      },
+      {
         signature: '@Remote(\'search\') search(request: SessionSearchRequest, signal: AbortSignal): Promise<SessionSearchValue>',
         description: 'Search visible Session content without resuming an Agent.',
         parameters: [{ name: 'request', description: 'literal message-content query.' }, { name: 'signal', description: 'cancellation for list and search reads.' }],
@@ -1840,6 +1858,31 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'request', description: 'Session identity whose cwd and preset select the catalog view.' }, { name: 'signal', description: 'caller lifetime carried by the Remote transport; admitted catalog reads retain their existing completion semantics.' }],
         returns: 'user-invocable skill metadata without loading skill bodies.',
         throws: ['RemoteError when the Session cannot be inspected or no registry can serve it.'],
+      },
+    ],
+  },
+  {
+    key: 'sessionTags',
+    summary: 'Durable session tag registry.',
+    description: 'Durable session tag registry. Set writes the complete tag list for a session; remove deletes the named tags and drops the row when none remain.',
+    methods: [
+      {
+        signature: 'list(sessionId: SessionId): Promise<readonly string[]>',
+        description: 'Read one session\'s durable tag list.',
+        parameters: [{ name: 'sessionId', description: 'the tagged session.' }],
+        returns: 'the tags in stored order; empty for an untagged session.',
+      },
+      {
+        signature: 'async set(sessionId: SessionId, tags: readonly string[]): Promise<readonly string[]>',
+        description: 'Replace one session\'s complete tag list. The normalized list is written durably before the `domain/changed` notification publishes.',
+        parameters: [{ name: 'sessionId', description: 'the tagged session.' }, { name: 'tags', description: 'new complete tag list; empty deletes the tag row.' }],
+        returns: 'the stored normalized tags.',
+      },
+      {
+        signature: 'async remove(sessionId: SessionId, tags: readonly string[]): Promise<readonly string[]>',
+        description: 'Remove named tags from one session, keeping the remaining order. Removing the last tag deletes the row; absent sessions are idempotent no-ops.',
+        parameters: [{ name: 'sessionId', description: 'the tagged session.' }, { name: 'tags', description: 'tags to remove.' }],
+        returns: 'the remaining stored tags.',
       },
     ],
   },
@@ -4964,7 +5007,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionListRequest',
-    declaration: 'export interface SessionListRequest {\n    readonly cursor?: string;\n}',
+    declaration: 'export interface SessionListRequest {\n    readonly cursor?: string;\n    readonly projection?: \'none\';\n}',
   },
   {
     name: 'SessionListValue',
@@ -5161,6 +5204,30 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SessionSurfaceSnapshot',
     declaration: 'export interface SessionSurfaceSnapshot {\n    session: SessionHeader;\n    inheritedEventCount: SessionLogOffset;\n    capturedThroughSeq: OptionalSessionSeq;\n    events: SurfaceEvent[];\n}',
+  },
+  {
+    name: 'SessionTagsListRequest',
+    declaration: 'export interface SessionTagsListRequest {\n    readonly sessionId: SessionId;\n}',
+  },
+  {
+    name: 'SessionTagsListValue',
+    declaration: 'export interface SessionTagsListValue {\n    readonly tags: readonly string[];\n}',
+  },
+  {
+    name: 'SessionTagsRemoveRequest',
+    declaration: 'export interface SessionTagsRemoveRequest {\n    readonly sessionId: SessionId;\n    readonly tags: readonly string[];\n}',
+  },
+  {
+    name: 'SessionTagsRemoveValue',
+    declaration: 'export interface SessionTagsRemoveValue {\n    readonly tags: readonly string[];\n}',
+  },
+  {
+    name: 'SessionTagsSetRequest',
+    declaration: 'export interface SessionTagsSetRequest {\n    readonly sessionId: SessionId;\n    readonly tags: readonly string[];\n}',
+  },
+  {
+    name: 'SessionTagsSetValue',
+    declaration: 'export interface SessionTagsSetValue {\n    readonly tags: readonly string[];\n}',
   },
   {
     name: 'SessionTelemetryRecord',

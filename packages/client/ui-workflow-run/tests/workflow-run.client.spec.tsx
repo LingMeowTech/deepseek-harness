@@ -301,6 +301,7 @@ const listState = (overrides: Partial<SessionListState> = {}): SessionListState 
   subagentsByParent: {},
   jobsBySession: {},
   currentAddress: undefined,
+  tagsBySession: {},
   ...overrides,
 })
 
