@@ -15,6 +15,12 @@ export interface TokenUsageProjection {
   outputTokens: number
   cacheReadTokens: number
   cacheWriteTokens: number
+  /**
+   * Derived cache-hit ratio of the prompt-side input:
+   * `cacheReadTokens / (uncachedInputTokens + cacheReadTokens)`, in `[0, 1]`.
+   * Absent before any input reported usage (zero denominator).
+   */
+  cacheHitRatio?: number | undefined
 }
 
 /**
