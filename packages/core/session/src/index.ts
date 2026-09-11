@@ -16,7 +16,7 @@ import type { Message } from '@deepseek-ai/dsh-llm'
 import { SESSION_FORMAT_VERSION, SessionLogOffset, SessionSeq } from './types.ts'
 import type { TypertLookup } from '@deepseek-ai/dsh-typert-protocol'
 import type { CreateSessionOptions, EpochHeader, PrepareSessionOptions, RequestContext, SessionEvent, SessionEventMap, SessionEventType, SessionHeader, SessionId, SurfaceIntent, SurfaceEventType } from './types.ts'
-import { deriveEventMessage, SurfaceManager } from './surface.ts'
+import { deriveEventMessage, stripReasoning, SurfaceManager } from './surface.ts'
 import type { SessionSurface } from './surface.ts'
 import { foldRequestHeader } from './request-header.ts'
 
@@ -28,7 +28,7 @@ export { interruptedTurnClosers, TOOL_NOT_STARTED, TOOL_OUTCOME_UNKNOWN } from '
 export { decodeStorageRecord, packChunkRuns } from './chunk-rows.ts'
 export type { ChunkRow, StorageRecord } from './chunk-rows.ts'
 export type { SessionSurface, SurfaceFoldReplacement, SurfaceFoldResult } from './surface.ts'
-export { deriveEventMessage, foldSurface, isAppendSurfaceEvent, isReplacementSurfaceEvent, isSurfaceEvent, isSurfaceEligibleType } from './surface.ts'
+export { deriveEventMessage, foldSurface, isAppendSurfaceEvent, isReplacementSurfaceEvent, isSurfaceEvent, isSurfaceEligibleType, stripReasoning } from './surface.ts'
 export { canonicalHeader, foldRequestHeader, headerEquals } from './request-header.ts'
 export { KNOWN_SESSION_EVENT_TYPES } from './known-event-types.ts'
 
@@ -796,11 +796,29 @@ export class Session {
       this.derivedNodes = 0
       this.derivedGeneration = generation
     }
+    // 对齐 Codex ReasoningContext 默认 current_turn：只回传当前轮思维链，
+    // 历史轮 assistant reasoning 在批处理层面过滤（保留 text/tool-call）。
+    let currentTurn: number | undefined
+    for (const seq of nodes) {
+      const entry = this.log[seq]
+      if (entry === undefined) continue
+      const data = entry.data as Record<string, unknown> | undefined
+      const turn = typeof data?.turn === 'number' ? data.turn : undefined
+      if (typeof turn === 'number') currentTurn = turn
+    }
     for (const seq of nodes.slice(this.derivedNodes)) {
       // Surface sequences are built from this.log — seq is always a valid
       // index by construction. The non-null assertion expresses that invariant.
       // oxlint-disable-next-line typescript/no-non-null-assertion
-      const msg = this.deriveEventMessage(this.log[seq]!)
+      const event = this.log[seq]!
+      let msg = this.deriveEventMessage(event)
+      if (msg !== null && event.type === 'assistant/message') {
+        const data = event.data as Record<string, unknown> | undefined
+        const turn = typeof data?.turn === 'number' ? data.turn : undefined
+        if (typeof turn === 'number' && currentTurn !== undefined && turn !== currentTurn) {
+          msg = stripReasoning(msg)
+        }
+      }
       // A surface node is one of the five message-producing types, but an
       // empty-content assistant/message (a max-tokens step that hosts only
       // usage) derives to null and must not enter the transcript.
@@ -1093,7 +1111,6 @@ export class SessionStore extends Service {
       } catch (error: unknown) {
         // Preserve the listener's exact rejection value; flush is a caller-owned
         // failure boundary, and Cordis listeners may throw arbitrary values.
-        // oxlint-disable-next-line typescript/prefer-promise-reject-errors
         return Promise.reject(error)
       }
     }))
