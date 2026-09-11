@@ -82,6 +82,12 @@ export interface SessionListState {
    * set, so consumers read absence rather than a sentinel.
    */
   jobsBySession: Readonly<Record<SessionId, readonly JobView[]>>
+  /**
+   * Durable per-session tags: cold-start pull plus live
+   * `host/session-tags-changed` frames (see SessionManager). Absence means
+   * "untagged", never "unread"; pipeline sessions carry `pipeline_id`.
+   */
+  tagsBySession?: Readonly<Record<SessionId, readonly string[]>>
   /** Current session's catalog-derived address, absent on ordinary navigation. */
   currentAddress: SubagentAddress | undefined
 }
@@ -234,6 +240,7 @@ export class ClientSessions implements ISessions {
     this.list = createSnapshotStore<SessionListState>({
       ids: [], byId: {}, current: undefined, phase: 'pending',
       subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
+      tagsBySession: {},
     })
     // The manager owns wire truth; the store is its projection. Manager
     // notifications are already microtask-batched.
@@ -269,6 +276,28 @@ export class ClientSessions implements ISessions {
    */
   open(id: SessionId): void {
     this.manager.select(id)
+  }
+
+  /**
+   * Replace one session's complete durable tag list; the Host's
+   * `host/session-tags-changed` frame is the only view refresh path.
+   * @param sessionId - the tagged session.
+   * @param tags - the complete replacement list, in display order.
+   * @throws when the Host rejects the write.
+   */
+  setSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void> {
+    return this.manager.setSessionTags(sessionId, tags)
+  }
+
+  /**
+   * Remove named durable tags from one session; refresh rides the Host's
+   * `host/session-tags-changed` frame, never a local echo.
+   * @param sessionId - the tagged session.
+   * @param tags - tag names to remove.
+   * @throws when the Host rejects the write.
+   */
+  removeSessionTags(sessionId: SessionId, tags: readonly string[]): Promise<void> {
+    return this.manager.removeSessionTags(sessionId, tags)
   }
 
   /**
@@ -576,7 +605,7 @@ export class ClientSessions implements ISessions {
   /** Project the manager's list snapshot into the store (title derivation is display-only). */
   private projectList(): void {
     const {
-      items, current, phase, subagentsByParent, jobsBySession, currentAddress,
+      items, current, phase, subagentsByParent, jobsBySession, tagsBySession, currentAddress,
     } = this.manager.getListSnapshot()
     const ids: SessionId[] = []
     const byId: Record<SessionId, SessionSummary> = {}
@@ -642,7 +671,7 @@ export class ClientSessions implements ISessions {
         ...(currentAddress === undefined ? {} : { subagentAddress: currentAddress }),
       })
     }
-    this.list.set({ ids, byId, current, phase, subagentsByParent, jobsBySession, currentAddress })
+    this.list.set({ ids, byId, current, phase, subagentsByParent, jobsBySession, tagsBySession, currentAddress })
     this.pruneScopes()
   }
 

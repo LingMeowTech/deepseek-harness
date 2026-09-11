@@ -233,11 +233,45 @@ export interface SkillListValue {
 /** Session list request. */
 export interface SessionListRequest {
   readonly cursor?: string
+  /** Metadata-only rows (B17 US2): skip projection column and snapshot reads. */
+  readonly projection?: 'none'
 }
 
 /** Session list response value. */
 export interface SessionListValue {
   readonly items: readonly SessionSummary[]
+}
+
+/** session.tags.list request payload. */
+export interface SessionTagsListRequest {
+  readonly sessionId: SessionId
+}
+
+/** session.tags.list response value. */
+export interface SessionTagsListValue {
+  readonly tags: readonly string[]
+}
+
+/** session.tags.set request payload; an empty list clears every tag. */
+export interface SessionTagsSetRequest {
+  readonly sessionId: SessionId
+  readonly tags: readonly string[]
+}
+
+/** session.tags.set response value. */
+export interface SessionTagsSetValue {
+  readonly tags: readonly string[]
+}
+
+/** session.tags.remove request payload. */
+export interface SessionTagsRemoveRequest {
+  readonly sessionId: SessionId
+  readonly tags: readonly string[]
+}
+
+/** session.tags.remove response value. */
+export interface SessionTagsRemoveValue {
+  readonly tags: readonly string[]
 }
 
 /** Session search request. */

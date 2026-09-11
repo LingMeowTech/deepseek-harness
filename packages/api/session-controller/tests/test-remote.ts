@@ -159,6 +159,15 @@ class TestSessionQuery extends SessionQueryEngine {
 export function installSessionReadTestServices(ctx: Context): void {
   if (ctx.get('sessionProjections') === undefined) new SessionProjectionRegistry(ctx)
   if (ctx.get('sessionQuery') === undefined) new TestSessionQuery(ctx)
+  if (ctx.get('sessionTags') === undefined) {
+    // Bench double: the tags registry writes through the storage-domain table
+    // the test contexts do not mount.
+    ctx.provide('sessionTags', {
+      list: async () => [],
+      set: async (_sessionId: unknown, tags: readonly string[]) => tags,
+      remove: async (_sessionId: unknown, tags: readonly string[]) => tags,
+    })
+  }
 }
 
 function installControllers(

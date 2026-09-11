@@ -20,6 +20,7 @@
     "src/skill-catalog.ts"
   ],
   "references": [
+    { "path": "../../../packages/session/session-tags" },
     { "path": "../../../vendor/cordis" },
     { "path": "../../../vendor/schemastery" },
     { "path": "../../core/agent" },

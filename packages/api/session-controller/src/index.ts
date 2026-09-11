@@ -44,6 +44,12 @@ import type {
   SessionPromptValue,
   SessionRenameRequest,
   SessionRenameValue,
+  SessionTagsListRequest,
+  SessionTagsListValue,
+  SessionTagsRemoveRequest,
+  SessionTagsRemoveValue,
+  SessionTagsSetRequest,
+  SessionTagsSetValue,
   SessionSearchRequest,
   SessionSearchValue,
   SessionSelectModelRequest,
@@ -51,6 +57,7 @@ import type {
   SessionUpdateQueueRequest,
   SessionUpdateQueueValue,
 } from './types.ts'
+import type { SessionTagRegistry } from '@lingmeow.tech/dsh-session-tags'
 
 export type * from './types.ts'
 export { ApiSessionNotFound } from './agent.ts'
@@ -89,6 +96,7 @@ export class SessionController extends TypertRemoteService {
     'llm',
     'sessions',
     'sessionProjections',
+    'sessionTags',
     'sessionQuery',
     'typert',
     'workspaceRegistry',
@@ -104,6 +112,7 @@ export class SessionController extends TypertRemoteService {
   private readonly controlState: SessionControlController
   private readonly history: SessionHistoryController
   private readonly listState: ApiSessionList
+  private readonly sessionTags: SessionTagRegistry
   private readonly openPath: (path: string, signal: AbortSignal) => Promise<void>
   private readonly canOpenPath: () => boolean
   private readonly promotions = new Set<Promise<void>>()
@@ -128,6 +137,7 @@ export class SessionController extends TypertRemoteService {
       ctx,
       config.coldBlankProbeMaxBytes ?? DEFAULT_COLD_BLANK_PROBE_MAX_BYTES,
     )
+    this.sessionTags = ctx.sessionTags
     this.openPath = internals.openPath ?? openNativePath
     this.canOpenPath = internals.canOpenPath
       ?? (() => config.nativeOpen ?? (internals.openPath !== undefined || canOpenNativePath()))
@@ -213,6 +223,36 @@ export class SessionController extends TypertRemoteService {
   @Remote('list')
   async list(_request: SessionListRequest, signal: AbortSignal): Promise<SessionListValue> {
     return { items: await this.listState.list(signal) }
+  }
+
+  /**
+   * Read one session's durable tag list (pipeline-zone session filtering).
+   * @param request - session whose tags are read.
+   * @returns the session's durable tag list.
+   */
+  @Remote('tagsList')
+  async tagsList(request: SessionTagsListRequest): Promise<SessionTagsListValue> {
+    return { tags: await this.sessionTags.list(request.sessionId) }
+  }
+
+  /**
+   * Replace one session's complete tag list; an empty list clears the row.
+   * @param request - session and the replacement tag list.
+   * @returns the session's durable tag list after the write.
+   */
+  @Remote('tagsSet')
+  async tagsSet(request: SessionTagsSetRequest): Promise<SessionTagsSetValue> {
+    return { tags: await this.sessionTags.set(request.sessionId, request.tags) }
+  }
+
+  /**
+   * Remove the named tags from one session's durable list.
+   * @param request - session and the tags to drop.
+   * @returns the session's durable tag list after the removal.
+   */
+  @Remote('tagsRemove')
+  async tagsRemove(request: SessionTagsRemoveRequest): Promise<SessionTagsRemoveValue> {
+    return { tags: await this.sessionTags.remove(request.sessionId, request.tags) }
   }
 
   /**

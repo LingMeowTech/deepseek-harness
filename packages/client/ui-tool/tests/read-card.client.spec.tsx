@@ -195,6 +195,7 @@ describe('ReadRow keyed toolview', () => {
     phase: 'ready',
     subagentsByParent: {}, jobsBySession: {},
     currentAddress: undefined,
+    tagsBySession: {},
   })
 
   const rowProps = (block: RunningToolCall | ToolResultNode): Parameters<typeof ReadRow>[0] => ({
@@ -282,7 +283,7 @@ describe('DetailsPanel Output section (read)', () => {
     const chat = createChatStore().create()
     if (selection !== null) chat.actions.select(selection)
     const sessions = createSnapshotStore<SessionListState>(cwd === undefined
-      ? { ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined }
+      ? { ids: [], byId: {}, current: undefined, phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined, tagsBySession: {} }
       : {
         ids: [SID],
         byId: { [SID]: { id: SID, displayTitle: 'r', running: false, blank: false, updatedAt: 0, cwd } },
@@ -290,6 +291,7 @@ describe('DetailsPanel Output section (read)', () => {
         phase: 'ready',
         subagentsByParent: {}, jobsBySession: {},
         currentAddress: undefined,
+        tagsBySession: {},
       })
     const session = createSnapshotStore(sessionSnapshot(SID))
     const conversation = createSnapshotStore(conversationSnapshot())

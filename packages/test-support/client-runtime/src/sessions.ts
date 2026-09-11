@@ -207,6 +207,11 @@ export class TestSessions implements ISessions {
 
   /** Replaceable search behavior (see {@link TestSessions.stubSearch}). */
   private searchStub: ((query: string, signal: AbortSignal) => { items: SessionSearchResultItem[]; hasMore: boolean }) | undefined
+
+  /** Bench double for the session-tags write face; no-ops keep the compile-time contract. */
+  async setSessionTags(_sessionId: SessionId, _tags: readonly string[]): Promise<void> {}
+  /** Bench double for the session-tags remove face. */
+  async removeSessionTags(_sessionId: SessionId, _tags: readonly string[]): Promise<void> {}
   private createStub: ((opts: Parameters<ISessions['create']>[0]) => Promise<SessionId>) | undefined
 
   /**
@@ -216,7 +221,7 @@ export class TestSessions implements ISessions {
   constructor(private readonly stabilize: Stabilizer, private readonly rootCtx: Context) {
     this.list = createSnapshotStore<SessionListState>({
       ids: [], byId: {}, current: undefined, phase: 'ready',
-      subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
+      subagentsByParent: {}, jobsBySession: {}, tagsBySession: {}, currentAddress: undefined,
     })
   }
 
