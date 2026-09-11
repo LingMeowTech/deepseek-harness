@@ -123,6 +123,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   workspaceRegistry: 'workspace.md',
   workspaceController: 'workspace.md',
   directoryPickerController: 'workspace.md',
+  sessionTags: 'pipeline.md',
 }
 
 /**
@@ -628,6 +629,15 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   TypertPackageRecord: 'invariants.md',
   TypertSchemaFilter: 'invariants.md',
   TypertSchemaRecord: 'invariants.md',
+  // Session-tag RPC wire types carried by pipeline sessions
+  // (docs/subsystems/pipeline.md).
+  SessionTagsListRequest: 'pipeline.md',
+  SessionTagsListValue: 'pipeline.md',
+  SessionTagsRemoveRequest: 'pipeline.md',
+  SessionTagsRemoveValue: 'pipeline.md',
+  SessionTagsSetRequest: 'pipeline.md',
+  SessionTagsSetValue: 'pipeline.md',
+  DecisionAskQuestion: 'subagent-decision-answer.md',
 }
 
 /** TypeScript lib and pinned framework types with no repository-owned data page. */
