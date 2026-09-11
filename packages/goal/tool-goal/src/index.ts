@@ -16,7 +16,7 @@ import {
   goalToolExecution,
   requireDirectHuman,
 } from './authority.ts'
-import { renderWrapupContext } from './wrapup.ts'
+import { isStructuredOutputSession, renderWrapupContext } from './wrapup.ts'
 
 export const name = 'tool-goal'
 export const inject = ['agents', 'goals', 'tools', 'systemPrompt', 'sessionProjections']
@@ -309,7 +309,8 @@ export function apply(ctx: Context, config: Config): void {
           code: 'model-reported',
           message: args.blocked_reason as string,
         })
-      if (authority.kind === 'goal-round') {
+      if (authority.kind === 'goal-round'
+        && !isStructuredOutputSession(execution.agent.session.header)) {
         exec.deferContext(createUserMessage({
           content: args.action === 'complete'
             ? renderWrapupContext(goal.objective)

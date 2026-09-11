@@ -2,6 +2,25 @@
 
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 
+/**
+ * Preset whose sessions contract to a machine-readable delivery (e.g. the
+ * pipeline runner's lazy-decomposition agent emits a pure-JSON action array).
+ * Such sessions must not be told to write a closing prose message.
+ */
+export const STRUCTURED_OUTPUT_PRESETS = ['pipeline-worker'] as const
+
+/**
+ * Whether a session's creation header names a structured-output preset that
+ * must keep its final delivery machine-readable instead of addressing the user.
+ * @param header - the calling session's immutable creation header; the preset
+ * is recorded there by the deployment composing the session (see the pipeline
+ * runner's `session.create` agentPreset flow).
+ */
+export function isStructuredOutputSession(header: { readonly agentPreset?: string }): boolean {
+  return header.agentPreset !== undefined
+    && (STRUCTURED_OUTPUT_PRESETS as readonly string[]).includes(header.agentPreset)
+}
+
 const GROUNDING =
   'Report only what earlier rounds and tool results in this session actually establish; '
   + 'when a detail is not in the session, say so instead of inventing it. '
