@@ -49,6 +49,8 @@ import {
 } from './child-agent.ts'
 import type { DelegatedPolicyOverrides } from './child-agent.ts'
 import { assertSubagentMaxDepth } from './depth.ts'
+import { SubagentDecisionAnswerTable } from './decision-answer.ts'
+import type { DecisionAnswerItem, DecisionAskQuestion } from './decision-answer.ts'
 import { seedDescriptorTurn } from './descriptor-seed.ts'
 import type { ContinuableCreateRequest, ContinuableCreateSpec, SubagentResult, SubagentStartRequest } from './types.ts'
 import type { ActivationObserver, ActivationTerminal } from './lifecycle.ts'
@@ -130,6 +132,12 @@ export type SubagentInterruptAuthority =
 export interface SubagentSendMessageOptions {
   /** Caller cancellation, owning the operation only until inbox acceptance. */
   readonly signal: AbortSignal
+  /**
+   * Structured decision answer for the child's parked ask (decision-answer
+   * channel). Present means this delivery settles the pending ask instead of
+   * delivering content; the child resumes with the chosen option.
+   */
+  readonly answers?: readonly DecisionAnswerItem[]
 }
 
 /** Inputs shared by model steering and the human Queue adapter. */
@@ -389,6 +397,8 @@ export class SubagentContinuationManager {
    */
   private readonly closingScopes = new Map<Agent, Set<Agent>>()
   private draining = false
+  /** Per-child parked decision asks for the decision-answer channel. */
+  private readonly decisionAnswers = new SubagentDecisionAnswerTable()
 
   constructor(
     private readonly ctx: Context,
@@ -618,6 +628,16 @@ export class SubagentContinuationManager {
       options.signal.throwIfAborted()
       /* v8 ignore stop */
     }
+  }
+
+  /**
+   * Read one continuable child's parked decision ask, if any. An empty array
+   * means no ask is currently parked (decision-answer channel).
+   * @param childId - the durable child session id to inspect.
+   * @returns the parked questions, or an empty array when none are parked.
+   */
+  pendingQuestions(childId: SessionId): readonly DecisionAskQuestion[] {
+    return this.decisionAnswers.pendingQuestions(childId)
   }
 
   /**
@@ -1134,6 +1154,7 @@ export class SubagentContinuationManager {
         appendDelegatedPolicyOverrides((childCtx.agent as Agent).session, create.delegatedPolicies)
       }
       applyChildComposition(childCtx, parent, inputs.composition)
+      this.decisionAnswers.installOn(childCtx, childId)
     }
     const observer = this.host.observeActivation(provider, childId, parent)
     // Agent creation owns rollback before handle transfer. A rejection leaves
@@ -1499,6 +1520,8 @@ export class SubagentContinuationManager {
     // makes a racing delivery wait for release rather than cold-resume into the
     // still-registered agent.
     this.activations.delete(childId)
+    // Drop any parked ask: a settled child can no longer be answered.
+    this.decisionAnswers.clear(childId)
     // BEFORE releasing ownership, while the parent still counts this child and
     // therefore cannot be judged settled. Delivering after the release would
     // race a parent watcher that resumes one microtask later, finds itself
