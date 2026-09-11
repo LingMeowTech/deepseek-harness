@@ -74,6 +74,7 @@ import type {
 import { listChildren as listSubagentChildren, listDescendants as listSubagentDescendants } from './list-children.ts'
 import type { SubagentDescendantListEntry, SubagentListEntry } from './list-children.ts'
 import { snapshotSubagentDescriptor } from './descriptor.ts'
+import type { DecisionAskQuestion } from './decision-answer.ts'
 import { subagentIdentityProjectionDefinition, subagentTimingProjectionDefinition } from './projection.ts'
 import { queueSubagentPrompt } from './internal.ts'
 
@@ -349,6 +350,16 @@ export class SubagentRuntime extends TypertRemoteService {
   }
 
   /**
+   * List one continuable child's parked decision ask, if any (decision-answer
+   * channel). An empty array means no ask is pending.
+   * @param childId - the durable child session id to inspect.
+   * @returns the parked questions, or an empty array when none are parked.
+   */
+  pendingQuestions(childId: SessionId): readonly DecisionAskQuestion[] {
+    return this.continuations?.pendingQuestions(childId) ?? []
+  }
+
+  /**
    * Enumerate the root's complete session-backed subagent tree in stable
    * pre-order from one live-preferred corpus, without loading or resuming an
    * Agent. Ordinary sessions and one-shot children remain traversal nodes so
@@ -504,7 +515,6 @@ export class SubagentRuntime extends TypertRemoteService {
    */
   registerProvider(provider: SubagentProvider): () => void {
     const name = provider.name
-    // oxlint-disable-next-line typescript/no-misused-promises -- synchronous disposer
     return this.ctx.effect(function* (this: SubagentRuntime) {
       if (this.providers.has(name)) {
         throw new SubagentError(`a subagent provider named "${name}" is already registered`, 'DUPLICATE_PROVIDER')

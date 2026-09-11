@@ -576,6 +576,14 @@ async drainContinuableChildren(parent: Agent, childIds: readonly SessionId[]): P
 listChildren(parentSessionId: SessionId, signal?: AbortSignal): Promise<SubagentListEntry[]>
 
 /**
+ * List one continuable child's parked decision ask, if any (decision-answer
+ * channel). An empty array means no ask is pending.
+ * @param childId - the durable child session id to inspect.
+ * @returns the parked questions, or an empty array when none are parked.
+ */
+pendingQuestions(childId: SessionId): readonly DecisionAskQuestion[]
+
+/**
  * Enumerate the root's complete session-backed subagent tree in stable
  * pre-order from one live-preferred corpus, without loading or resuming an
  * Agent. Ordinary sessions and one-shot children remain traversal nodes so
@@ -676,7 +684,7 @@ list(): string[]
 async start(name: string, request: SubagentStartRequest): Promise<SubagentRun>
 ```
 
-Types: [Agent](core.md) · [ContentBlock](llm-streaming.md) · [MessageId](llm-streaming.md) · [SessionId](core.md)
+Types: [Agent](core.md) · [ContentBlock](llm-streaming.md) · [DecisionAskQuestion](subagent-decision-answer.md) · [MessageId](llm-streaming.md) · [SessionId](core.md)
 
 Source: [`packages/subagent/subagent/src/index.ts`](../../packages/subagent/subagent/src/index.ts)
 
