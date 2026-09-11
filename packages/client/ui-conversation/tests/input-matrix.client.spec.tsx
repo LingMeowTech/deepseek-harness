@@ -50,6 +50,7 @@ function mountBar(shell: SessionInputShell, over?: { running?: boolean; disabled
     useSessions: bindSnapshotSelector(createSnapshotStore({
       ids: [], byId: {}, current: undefined, phase: 'ready',
       subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
+      tagsBySession: {},
     })),
     useSessionPendingInteraction: bindSnapshotSelector(
       createSnapshotStore<SessionPendingInteractionSnapshot>(new Map()),

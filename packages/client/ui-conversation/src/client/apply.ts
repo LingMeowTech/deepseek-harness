@@ -271,12 +271,17 @@ export function apply(ctx: Context): void {
   const registerComposerBar = () => slots.register({
     name: 'conversation.composer.bar',
     locale: NS,
+    // The two named control seats in the bar's tool row (plan beside the
+    // access control, model right); empty until their owning plugins
+    // register. `conversation.input.hindsight` is the LMTech Hindsight
+    // memory seat, also beside the access control.
     children: {
       'conversation.input.attachments': { kind: 'single', scope: 'session-maybe' },
       'conversation.input.overlay': { kind: 'list', scope: 'session' },
       'conversation.input.left': { kind: 'list', scope: 'session' },
       'conversation.input.plan': { kind: 'single', scope: 'session' },
       'conversation.input.right': { kind: 'list', scope: 'session' },
+      'conversation.input.hindsight': { kind: 'single', scope: 'session' },
       'conversation.input.model': { kind: 'single', scope: 'session' },
       'conversation.composer.dock': { kind: 'list', scope: 'session' },
     },

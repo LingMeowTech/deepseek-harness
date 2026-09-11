@@ -143,6 +143,14 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     }
     /** Plan control inside the composer tool row. */
     'conversation.input.plan': { kind: 'single'; scope: 'session'; owner: InputControlOwnerProps }
+    /**
+     * The named Hindsight-memory seat in the composer tool row, immediately
+     * right of the plan seat and beside the access-mode control — one
+     * occupant, so taking it means rendering the whole memory enable toggle
+     * plus bank multi-select yourself. Same `locked`-only owner share and the
+     * same renders-nothing-while-empty contract as the plan seat.
+     */
+    'conversation.input.hindsight': { kind: 'single'; scope: 'session'; owner: InputControlOwnerProps }
     /** Model selector inside the composer tool row. */
     'conversation.input.model': { kind: 'single'; scope: 'session'; owner: InputControlOwnerProps }
   }
@@ -289,7 +297,7 @@ export type ComposerBarProps =
   PropsRuntime<'conversation.composer.bar'>
   & PropsRenderSlots<
     | 'conversation.input.attachments' | 'conversation.input.overlay'
-    | 'conversation.input.left' | 'conversation.input.plan'
+    | 'conversation.input.left' | 'conversation.input.plan' | 'conversation.input.hindsight'
     | 'conversation.input.right' | 'conversation.input.model'
     | 'conversation.composer.dock'
   >

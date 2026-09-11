@@ -10,6 +10,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-agent-preset/client'
 // Inline-safe shared fold: shipped ids map to dictionary keys in one home.
 import { presetDisplayText } from '@deepseek-ai/dsh-agent-presets/display'
 import { PluginInventorySettingsTab, type PluginInventorySettingsTabInjected } from './PluginInventorySettingsTab.tsx'
+import { PluginInventoryItemsController } from './inventory-items.ts'
 import { en, zh, type PluginInventoryLocaleKey } from './locales.ts'
 
 export type { PluginInventorySettingsTabInjected, PluginInventorySettingsTabProps } from './PluginInventorySettingsTab.tsx'
@@ -45,7 +46,19 @@ export function apply(ctx: ClientContext): void {
   const agentPresetCopy = ctx.locale.bind('settings.agentPreset')
   const presetName: PluginInventorySettingsTabInjected['presetName'] = preset =>
     presetDisplayText(preset, agentPresetCopy).name
-  const injected = (): PluginInventorySettingsTabInjected => ({ list, presetName })
+  const items = new PluginInventoryItemsController(
+    () => ctx.slots.entries('settings.plugin.inventory.item'),
+  )
+  // A row registered after the first read joins the list without a wire call.
+  ctx.effect(
+    () => ctx.slots.subscribe('settings.plugin.inventory.item', () => items.refresh()),
+    'ui-settings-plugin-inventory: item ledger',
+  )
+  const injected = (): PluginInventorySettingsTabInjected => ({
+    list,
+    presetName,
+    hooks: { pluginInventoryItems: items.inject().hooks.pluginInventoryItems },
+  })
 
   ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
     name: 'settings.plugins.tab',
@@ -54,5 +67,6 @@ export function apply(ctx: ClientContext): void {
     label: () => t('tab'),
     locale: NS,
     inject: injected,
+    children: { 'settings.plugin.inventory.item': { kind: 'keyed', scope: 'root' } },
   }, PluginInventorySettingsTab))
 }
