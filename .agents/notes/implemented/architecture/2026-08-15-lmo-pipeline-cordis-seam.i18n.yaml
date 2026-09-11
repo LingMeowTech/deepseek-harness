@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-15-lmo-pipeline-cordis-seam.md
+2026-08-15-lmo-pipeline-cordis-seam.md: 8f744a8bdd9aa7949115e3d5c4dff6d082c9c714
+2026-08-15-lmo-pipeline-cordis-seam.zh.md: c2a2fe1a0fd3ec4576432258d36bc57eebb57b9b
