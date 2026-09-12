@@ -107,6 +107,23 @@ export function SidebarRoot({
   }, [collapsed])
   const wide = !collapsed || !settled
 
+  // The one shared search box: raw query goes to the browsing region, which
+  // parses its own scope prefix and searches locally.
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchInput = useRef<HTMLInputElement | null>(null)
+  // Rail search = expand + land in the box: the flag arms before the expand
+  // request; once the shell flips wide the input mounts and takes focus.
+  const [searchOnExpand, setSearchOnExpand] = useState(false)
+  useEffect(() => {
+    if (wide && searchOnExpand) {
+      const timer = window.setTimeout(() => {
+        searchInput.current?.focus({ preventScroll: true })
+        setSearchOnExpand(false)
+      }, EXPAND_SLIDE_MS)
+      return () => { window.clearTimeout(timer) }
+    }
+  }, [wide, searchOnExpand])
+
   // Freeze the content at its expanded width while it fades out (collapsed
   // && wide): the sliding column then clips it instead of reflowing it. The
   // rail layout (.collapsed styles) only applies once the fade settles.
@@ -162,6 +179,13 @@ export function SidebarRoot({
   }, [pointerInside])
 
   const buildVersion = localBuildVersion()
+
+  // The browsing region receives the shell's shared search box query.
+  const sectionOwner = {
+    wide,
+    expandSidebar: () => { if (collapsed) toggleSidebar() },
+    searchQuery,
+  }
 
   return (
     <div
@@ -258,10 +282,7 @@ export function SidebarRoot({
       {/* The browsing region fills the column between the controls and the
           foot in both states; its rail icon column rides the same slot. */}
       <div className={css.regionArea}>
-        {renderSlot('sidebar.workspaces', {
-          wide,
-          expandSidebar: () => { if (collapsed) toggleSidebar() },
-        })}
+        {renderSlot('sidebar.workspaces', sectionOwner)}
       </div>
 
       {/* Footer actions stack above Settings in both sidebar widths. */}

@@ -669,7 +669,6 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   SessionTagsRemoveValue: 'pipeline.md',
   SessionTagsSetRequest: 'pipeline.md',
   SessionTagsSetValue: 'pipeline.md',
-  DecisionAskQuestion: 'subagent-decision-answer.md',
 }
 
 /** TypeScript lib and pinned framework types with no repository-owned data page. */

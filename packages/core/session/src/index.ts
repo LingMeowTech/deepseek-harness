@@ -838,6 +838,17 @@ export class Session {
       this.derivedNodes = 0
       this.derivedGeneration = generation
     }
+    // Codex's ReasoningContext defaults to `current_turn`: only the newest
+    // turn's reasoning enters the transcript, while older turns keep their text
+    // and tool calls.
+    let currentTurn: number | undefined
+    for (const seq of nodes) {
+      const entry = this.log[seq]
+      if (entry === undefined) continue
+      const data = entry.data as Record<string, unknown> | undefined
+      const turn = typeof data?.turn === 'number' ? data.turn : undefined
+      if (typeof turn === 'number') currentTurn = turn
+    }
     for (const seq of nodes.slice(this.derivedNodes)) {
       // Surface sequences are built from this.log — seq is always a valid
       // index by construction. The non-null assertion expresses that invariant.

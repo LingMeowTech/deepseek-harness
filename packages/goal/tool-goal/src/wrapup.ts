@@ -3,22 +3,22 @@
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 
 /**
- * Preset whose sessions contract to a machine-readable delivery (e.g. the
- * pipeline runner's lazy-decomposition agent emits a pure-JSON action array).
- * Such sessions must not be told to write a closing prose message.
- */
-export const STRUCTURED_OUTPUT_PRESETS = ['pipeline-worker'] as const
-
-/**
- * Whether a session's creation header names a structured-output preset that
- * must keep its final delivery machine-readable instead of addressing the user.
+ * Whether a session's creation header names a structured-output preset whose
+ * final delivery must stay machine-readable instead of addressing the user
+ * (e.g. the pipeline runner's lazy-decomposition agent emits a pure-JSON
+ * action array), so it must not be told to write a closing prose message.
  * @param header - the calling session's immutable creation header; the preset
  * is recorded there by the deployment composing the session (see the pipeline
  * runner's `session.create` agentPreset flow).
+ * @param presets - the deployment-configured preset names to suppress; the
+ * list is a validated `Config` field, never a module constant.
+ * @returns whether the header's preset is in the configured suppression list.
  */
-export function isStructuredOutputSession(header: { readonly agentPreset?: string }): boolean {
-  return header.agentPreset !== undefined
-    && (STRUCTURED_OUTPUT_PRESETS as readonly string[]).includes(header.agentPreset)
+export function isStructuredOutputSession(
+  header: { readonly agentPreset?: string },
+  presets: readonly string[],
+): boolean {
+  return header.agentPreset !== undefined && presets.includes(header.agentPreset)
 }
 
 const GROUNDING =

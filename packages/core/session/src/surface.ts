@@ -125,6 +125,21 @@ export function deriveEventMessage(event: SessionEvent): Message | null {
   }
 }
 
+/**
+ * Applied by `Session.deriveMessages()` to an older-turn assistant message:
+ * Codex's ReasoningContext defaults to `current_turn`, so reasoning leaves the
+ * context while that turn's text and tool calls stay. A message left with no
+ * content derives to null instead of an empty assistant turn.
+ */
+export function stripReasoning(message: Message): Message | null {
+  if (!message.content.some(block => block.type === 'reasoning')) return message
+  const content = Object.freeze(
+    message.content.filter(block => block.type !== 'reasoning') as Message['content'],
+  )
+  if (content.length === 0) return null
+  return Object.freeze({ ...message, content }) as Message
+}
+
 /** Whether a payload field is a JSON object rather than an array or scalar. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)

@@ -294,10 +294,12 @@
     - id: ui-workspace
       name: '@deepseek-ai/dsh-client-ui-workspace'
 
-    # Pipeline zone（`sidebar.pipelines` 区）不再由 harness 官方 bundle 挂载：
-    # 该能力已迁至 plugins 仓独立包 `@lingmeow.tech/dsh-lmtech-pipeline`（client 面），
-    # 经 dsh 用户 profile（~/.dsh/profiles/web）的插件清单装配。
-    # 旧 row `@deepseek-ai/dsh-client-ui-lmo-pipeline` 在本仓从未存在 → 移除（018/020 收口）。
+    # The pipeline zone no longer rides a fork-declared slot: the client surface
+    # lives in the plugins repo package `@lingmeow.tech/dsh-lmtech-pipeline`,
+    # mounted from the dsh user profile's plugin list (~/.dsh/profiles/web), and
+    # panel surfaces ride the upstream `sidebar.panellist` panel contract.
+    # The old row `@deepseek-ai/dsh-client-ui-lmo-pipeline` never existed here
+    # (018/020 closure).
 
     # Input triggers: the '/' | '@' pipeline (ui-input-trigger), the command surface over
     # it (ui-commands), and the reference sources (ui-skill / ui-reference).

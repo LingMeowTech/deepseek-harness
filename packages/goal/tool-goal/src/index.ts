@@ -25,16 +25,26 @@ export const inject = ['agents', 'goals', 'tools', 'systemPrompt', 'sessionProje
 export interface Config {
   /** Minimum admitted goal rounds before the model may self-report `blocked`. */
   blockedAfterConsecutiveRounds?: number
+  /**
+   * Session `agentPreset` names whose autonomous rounds must keep their final
+   * delivery machine-readable (for example a lazy-decomposition pipeline worker
+   * that emits a pure-JSON action array), so the closing prose instruction is
+   * suppressed for them. Deployments name their own presets here; the plugin
+   * hard-codes none.
+   */
+  structuredOutputPresets?: string[]
 }
 
 /** Schemastery config for the goal-tool policy. */
 export const Config: z<Config> = z.object({
   blockedAfterConsecutiveRounds: z.number().step(1).min(1).default(3),
+  structuredOutputPresets: z.array(z.string()).default(['pipeline-worker']),
 })
 
 /** Fully materialized tool policy. */
 interface ResolvedConfig {
   readonly blockedAfterConsecutiveRounds: number
+  readonly structuredOutputPresets: readonly string[]
 }
 
 type UpdateAction = 'edit' | 'pause' | 'resume' | 'complete' | 'blocked'
@@ -127,7 +137,12 @@ function resolveConfig(config: Config): ResolvedConfig {
   if (!Number.isSafeInteger(blockedAfter) || blockedAfter < 1) {
     throw new TypeError('blockedAfterConsecutiveRounds must be a positive safe integer')
   }
-  return { blockedAfterConsecutiveRounds: blockedAfter }
+  const structuredOutputPresets = config.structuredOutputPresets ?? ['pipeline-worker']
+  if (!Array.isArray(structuredOutputPresets)
+    || structuredOutputPresets.some(preset => typeof preset !== 'string' || preset.length === 0)) {
+    throw new TypeError('structuredOutputPresets must be an array of non-empty preset names')
+  }
+  return { blockedAfterConsecutiveRounds: blockedAfter, structuredOutputPresets }
 }
 
 /** Whether optional text is meaningful rather than a strict-schema empty filler. */
@@ -318,7 +333,7 @@ export function apply(ctx: Context, config: Config): void {
           message: args.blocked_reason as string,
         })
       if (authority.kind === 'goal-round'
-        && !isStructuredOutputSession(execution.agent.session.header)) {
+        && !isStructuredOutputSession(execution.agent.session.header, resolved.structuredOutputPresets)) {
         exec.deferContext(createUserMessage({
           content: args.action === 'complete'
             ? renderWrapupContext(goal.objective)

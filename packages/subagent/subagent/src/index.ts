@@ -73,7 +73,6 @@ import type { SubagentDelivery } from './inbox.ts'
 import { listChildren as listSubagentChildren, listDescendants as listSubagentDescendants } from './list-children.ts'
 import type { SubagentDescendantListEntry, SubagentListEntry } from './list-children.ts'
 import { snapshotSubagentDescriptor } from './descriptor.ts'
-import type { DecisionAskQuestion } from './decision-answer.ts'
 import { subagentIdentityProjectionDefinition, subagentTimingProjectionDefinition } from './projection.ts'
 import { establishCatalogChild, subagentCatalogProjectionDefinition } from './catalog.ts'
 import { deliverSubagentPrompt } from './internal.ts'
@@ -349,16 +348,6 @@ export class SubagentRuntime extends TypertRemoteService {
    */
   listChildren(parentSessionId: SessionId, signal?: AbortSignal): Promise<SubagentListEntry[]> {
     return listSubagentChildren(this.ctx, parentSessionId, signal)
-  }
-
-  /**
-   * List one continuable child's parked decision ask, if any (decision-answer
-   * channel). An empty array means no ask is pending.
-   * @param childId - the durable child session id to inspect.
-   * @returns the parked questions, or an empty array when none are parked.
-   */
-  pendingQuestions(childId: SessionId): readonly DecisionAskQuestion[] {
-    return this.continuations?.pendingQuestions(childId) ?? []
   }
 
   /**

@@ -49,7 +49,7 @@ Check this table before writing a control in a feature package. A plugin cannot 
 | `RiskConfirmation` | Sensitive action gated behind an explicit checkbox. |
 | `OnboardingSurface` | First-run stage that holds the application root inert. |
 | `Tooltip` | Hover text on a cloned anchor, placed right, bottom, or top. |
-| `HoverCard` | Hover preview the pointer can rest on and select from; optional copy button. |
+| `HoverCard` | Hover preview the pointer can rest on and select from; optional copy button, plus a pin toggle that keeps the card open after the pointer leaves (required `pinLabel`/`unpinLabel`). |
 | `Toast` | Transient top-center banner held for the owner's `holdMs`. |
 | `JsonTree`, `JsonBlock` | Read-only JSON inspection. |
 | `MarkdownText`, `CodeBlock` | Untrusted GFM with TeX math, and highlighted code. `CodeBlock` accepts opt-in `lineNumbers`; copied source excludes the gutter, and `contentRef` exposes its stable source wrapper to an owner that uses it as a scrollport. |

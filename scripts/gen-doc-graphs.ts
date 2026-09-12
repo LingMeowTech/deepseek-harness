@@ -307,6 +307,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Waits for every configured backend, then publishes the domain form as one lifecycle-bound service for typed durable state.',
   },
   {
+    key: 'sessionTags',
+    pkg: 'session-tags',
+    title: 'Durable session tag registry',
+    mode: 'core',
+    consumers: ['api-session-controller'],
+    note: 'Owns one storage-domain table of string labels keyed by session id, with a write replacing the whole list and normalization bounded before any write; the Host API proxy exposes it to clients, which pull the authoritative list instead of receiving a change frame.',
+  },
+  {
     key: 'messageFeedback',
     pkg: 'message-feedback',
     title: 'Lifecycle-bound message feedback',

@@ -16,11 +16,13 @@ import css from './HoverCard.module.css'
  * included in the card's accessible name.
  * @param props.copyLabel - localized accessible activation-label prefix.
  * @param props.copiedLabel - localized visible success label.
+ * @param props.pinLabel - localized accessible label of the unpressed pin control.
+ * @param props.unpinLabel - localized accessible label of the pressed pin control.
  * @returns anchor wrapper with the conditional portaled card.
  */
 export function HoverCard({
   anchor, content, openDelayMs = 500, disabled = false,
-  copyText, copyLabel, copiedLabel,
+  copyText, copyLabel, copiedLabel, pinLabel, unpinLabel,
 }: {
   anchor: ReactNode
   content: ReactNode
@@ -29,6 +31,8 @@ export function HoverCard({
   copyText?: string | undefined
   copyLabel: string
   copiedLabel: string
+  pinLabel: string
+  unpinLabel: string
 }) {
   const rootRef = useRef<HTMLSpanElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -175,7 +179,7 @@ export function HoverCard({
             type="button"
             className={`${css.pin}${pinned ? ` ${css.pinned}` : ''}`}
             aria-pressed={pinned}
-            aria-label={pinned ? '取消固定' : '固定'}
+            aria-label={pinned ? unpinLabel : pinLabel}
             onClick={(e) => {
               e.stopPropagation()
               togglePin()

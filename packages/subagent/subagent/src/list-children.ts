@@ -30,14 +30,9 @@ import type { SubagentIdentityProjection } from './projection-types.ts'
 export type { SubagentListEntry } from './control-types.ts'
 
 /**
- * One entry of a {@link listChildren} result, ordered by header `createdAt`
- * newest first with ties broken on id (descending). Only a candidate whose durable header has
- * `origin: 'subagent'` is interpreted. A served `subagent` projection value
- * produces a `child`; a settled candidate whose fold served no identity
- * produces a `diagnostic`; a running candidate without one is omitted — its
- * descriptor may not be appended yet (the creation window). Diagnostics
- * relay the projection fold's outcome or a failed read, never a per-child
- * event scan, and never expose model-hidden descriptor content.
+ * Concurrent cold observations per explicit catalog listing. Current Session
+ * persistence providers are local; a networked provider must promote this to
+ * a validated deployment setting.
  */
 const COLD_READ_CONCURRENCY = 4
 
@@ -81,8 +76,7 @@ interface PositionedCandidate {
  *   optional persistence, and the optional projection cache.
  * @param parentSessionId - parent session whose direct children are listed.
  * @param signal - caller-owned cancellation observed around every persistence read.
- * @returns children and per-child diagnostics ordered by `createdAt`
- * descending (newest first), then id descending.
+ * @returns children and per-child diagnostics ordered by `createdAt`, then id.
  * @throws {@link SubagentError} when the projection registry or the session
  *   store is not mounted, or the caller cancels the listing.
  */
@@ -287,9 +281,9 @@ function descendantCandidates(
   return positioned
 }
 
-/** Compare siblings by durable creation time (newest first), then id. */
+/** Compare siblings by durable creation time, then id. */
 function compareCorpusRecords(a: CorpusRecord, b: CorpusRecord): number {
-  return b.header.createdAt - a.header.createdAt || b.header.id.localeCompare(a.header.id)
+  return a.header.createdAt - b.header.createdAt || a.header.id.localeCompare(b.header.id)
 }
 
 /**

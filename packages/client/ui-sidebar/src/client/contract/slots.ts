@@ -38,13 +38,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'sidebar.workspaces': { kind: 'single'; scope: 'root'; owner: SidebarSectionOwnerProps }
     /**
-     * The pipeline browsing region, rendered below `sidebar.workspaces`: the
-     * lmo pipeline hierarchy (project → pipeline → state → job), pipeline
-     * sessions, and the approve/rerun actions. Declared by this package's
-     * 'sidebar' entry; ui-lmo-pipeline registers the browser.
-     */
-    'sidebar.pipelines': { kind: 'single'; scope: 'root'; owner: SidebarSectionOwnerProps }
-    /**
      * The settings seat at the sidebar foot. Declared by this package's
      * 'sidebar' entry; ui-settings registers its trigger row + modal panel.
      * The sidebar passes only its column state — it holds no settings state.
@@ -145,7 +138,6 @@ export type SidebarRootComponentProps =
     | 'sidebar.brand.name'
     | 'sidebar.panellist'
     | 'sidebar.workspaces'
-    | 'sidebar.pipelines'
     | 'sidebar.settings'
     | 'sidebar.footer.action'
   >

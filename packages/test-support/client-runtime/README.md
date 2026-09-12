@@ -128,7 +128,7 @@ The bench copies no production logic: it mounts the production `SlotRegistry`, p
 | [`src/assembly/modules.ts`](src/assembly/modules.ts) | Source `/client` imports and replacements, registered through the production module facade's pending factory queue |
 | [`src/assembly/test-client.ts`](src/assembly/test-client.ts) | `TestClient`: transport install, jsdom shims, `bootClient`, mount, readiness wait, `reload`/`unload`/`dispose` |
 | [`src/assembly/vitest.ts`](src/assembly/vitest.ts) | Test-scoped `mock` and lazy `start` fixtures |
-| [`src/assembly/remote-default-responses.ts`](src/assembly/remote-default-responses.ts) | `remoteDefaultResponses`: default responses of the Remote endpoints the roster calls at boot |
+| [`src/assembly/remote-default-responses.ts`](src/assembly/remote-default-responses.ts) | `remoteDefaultResponses`: default state for the Remote endpoints the roster reads, including the auxiliary per-session tag pull a session list triggers when its first row appears |
 | [`src/assembly/remote-proxies.ts`](src/assembly/remote-proxies.ts) | Contract-free `remote.<ns>` proxies over the Connection: `remoteNamespacesOf`, `remoteProxiesPlugin` |
 | [`src/assembly/bundle-roster.ts`](src/assembly/bundle-roster.ts) | `bundleRoster` and `webApp`: the browser roster read from bundle patch files with the include plugin's own schema and patch application |
 | — | No runtime invariant companion is published; this test-support package owns no production event stream or mutable data — it assembles the runtime SlotRegistry and renderer (whose packages own their invariants) around test doubles; its own behavior is exercised by its package tests. |

@@ -42,7 +42,7 @@ const LINK_MAP: Record<string, string> = {
   ContentBlock: 'subsystems/core.md',
   MessageSource: 'subsystems/core.md',
   ScheduleChange: 'subsystems/schedule.md',
-  StreamChunk: 'subsystems/llm-streaming.md',
+  AssistantStreamRecord: 'subsystems/llm-streaming.md',
   TokenUsage: 'subsystems/llm-streaming.md',
   TodoItem: 'subsystems/todo.md',
   TurnTrigger: 'subsystems/session.md',

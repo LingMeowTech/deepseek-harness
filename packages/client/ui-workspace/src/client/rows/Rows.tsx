@@ -210,6 +210,8 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
       copyText={row.cwd}
       copyLabel={t('copy')}
       copiedLabel={t('hover.copied')}
+      pinLabel={t('hover.pin')}
+      unpinLabel={t('hover.unpin')}
     />
   )
 }
@@ -508,6 +510,8 @@ export function SessionNodeItem({
       copyText={row.blank ? undefined : row.title}
       copyLabel={t('copy')}
       copiedLabel={t('hover.copied')}
+      pinLabel={t('hover.pin')}
+      unpinLabel={t('hover.unpin')}
     />
   )
 }

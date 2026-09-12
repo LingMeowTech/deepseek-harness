@@ -8,11 +8,35 @@
 import { globSync, readFileSync } from 'node:fs'
 import { dirname, resolve, sep } from 'node:path'
 
-const SCOPE = '@deepseek-ai/dsh-'
+/** Workspace package-name prefixes the graph covers: the upstream harness
+ * family plus this fork's own `@lingmeow.tech/dsh-*` packages. A workspace
+ * member outside every listed scope is silently absent from the module graph
+ * and from every diagram and table that resolves packages through this module. */
+const SCOPES = ['@deepseek-ai/dsh-', '@lingmeow.tech/dsh-'] as const
+
+/** One workspace package manifest as read for graph discovery. */
+interface PackageManifest {
+  /** Repo-relative manifest path. */
+  rel: string
+  /** Full npm package name. */
+  name: string
+  /** Declared peer dependencies, keyed by package name. */
+  peerDependencies?: Record<string, string>
+}
+
+/**
+ * Remove the matching scope prefix from a workspace package name.
+ * @param name - full npm package name.
+ * @returns the graph-facing short name, or undefined when no scope matches.
+ */
+function shortName(name: string): string | undefined {
+  for (const scope of SCOPES) if (name.startsWith(scope)) return name.slice(scope.length)
+  return undefined
+}
 
 /** One harness package and its in-repo peer-dependency edges. */
 export interface PackageGraphNode {
-  /** Package name with the `@deepseek-ai/dsh-` prefix removed. */
+  /** Package name with its scope prefix removed. */
   short: string
   /** Full npm package name. */
   name: string
@@ -33,40 +57,39 @@ export interface PackageGraphNode {
  *   stable back edges inside a dependency cycle.
  */
 export function collectPackageGraph(root: string, groupOrder: readonly string[], gate: string): PackageGraphNode[] {
+  const manifests: PackageManifest[] = globSync('packages/*/*/package.json', { cwd: root })
+    .map(path => path.split(sep).join('/'))
+    .sort()
+    .map((rel) => {
+      const manifest = JSON.parse(readFileSync(resolve(root, rel), 'utf8')) as Omit<PackageManifest, 'rel'>
+      return { rel, ...manifest }
+    })
+  const names = new Set(manifests.map(manifest => manifest.name))
   const packages: PackageGraphNode[] = []
-  for (const rel of globSync('packages/*/*/package.json', { cwd: root }).map(path => path.split(sep).join('/')).sort()) {
-    const json = JSON.parse(readFileSync(resolve(root, rel), 'utf8')) as {
-      name: string
-      peerDependencies?: Record<string, string>
-    }
-    if (!json.name.startsWith(SCOPE)) continue
+  const shorts = new Set<string>()
+  for (const { rel, name, peerDependencies } of manifests) {
+    const short = shortName(name)
+    if (short === undefined) continue
     const [, group, leaf] = rel.split('/')
     if (group === undefined || leaf === undefined) throw new Error(`${gate}: unexpected package path ${rel}`)
-    const deps = Object.keys(json.peerDependencies ?? {})
-      .filter(dep => dep.startsWith(SCOPE))
-      .map(dep => dep.slice(SCOPE.length))
-      .sort()
-    packages.push({
-      short: json.name.slice(SCOPE.length),
-      name: json.name,
-      group,
-      rel: dirname(rel),
-      deps,
-    })
+    if (shorts.has(short)) {
+      throw new Error(`${gate}: '${short}' names two workspace packages; ${SCOPES.join(' and ')} must stay disjoint once the scope prefix is removed`)
+    }
+    shorts.add(short)
+    const deps: string[] = []
+    for (const peer of Object.keys(peerDependencies ?? {})) {
+      const peerShort = shortName(peer)
+      if (peerShort === undefined) continue
+      if (!names.has(peer)) throw new Error(`${gate}: ${name} references missing in-repo peer ${peer}`)
+      deps.push(peerShort)
+    }
+    packages.push({ short, name, group, rel: dirname(rel), deps: deps.sort() })
   }
   return topoSort(packages, groupOrder, gate)
 }
 
 function topoSort(packages: PackageGraphNode[], groupOrder: readonly string[], gate: string): PackageGraphNode[] {
-  const byName = new Map(packages.map(pkg => [pkg.short, pkg]))
-  for (const pkg of packages) {
-    for (const dependency of pkg.deps) {
-      if (!byName.has(dependency)) {
-        throw new Error(`${gate}: ${pkg.name} references missing in-repo peer ${SCOPE}${dependency}`)
-      }
-    }
-  }
-  const remaining = new Map(byName)
+  const remaining = new Map(packages.map(pkg => [pkg.short, pkg]))
   const placed = new Set<string>()
   const out: PackageGraphNode[] = []
   while (remaining.size > 0) {
