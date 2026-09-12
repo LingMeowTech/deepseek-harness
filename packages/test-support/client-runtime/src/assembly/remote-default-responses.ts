@@ -1,18 +1,21 @@
 /**
  * Default responses for every Remote endpoint the web assembly calls while
- * booting and rendering with no sessions, no workspaces, and default settings.
- * The comment above each row names the plugin that calls it; endpoints boot
- * never touches stay absent so a new call fails loud. `$events` is built into
+ * booting and rendering with no workspaces and default settings — including the
+ * auxiliary per-session reads that fire as soon as a row appears. The comment
+ * above each row names the plugin that calls it; an endpoint no default-state
+ * render reaches stays absent so a new call fails loud. `$events` is built into
  * `RemoteMock`.
  * @module @deepseek-ai/dsh-client-test-runtime/src/assembly/remote-default-responses
  */
 import { ok, openStream, type RemoteTable } from '@deepseek-ai/dsh-remote-mock'
 
-/** Default responses of the boot-time Remote endpoints; a spec loads it first and layers its own table on top. */
+/** Default responses the assembled client reaches in its default state; a spec loads it first and layers its own table on top. */
 export const remoteDefaultResponses: RemoteTable = {
   unary: {
     // api-session-controller `sessions.handleConnected()` on `connection/reset`.
     'session/list': ok({ items: [] }),
+    // api-session-controller `sessions.refreshList()` for listed rows and `recordMutation()` for a newly observed one.
+    'session/tagsList': ok({ tags: [] }),
     // ui-settings `mirror.ensure()` at apply and again on `connection/reset`.
     'settings/describe': ok({ writable: true, hasDocument: false, namespaces: [] }),
     // ui-model-selection `ModelDirectoryResolver` constructor.

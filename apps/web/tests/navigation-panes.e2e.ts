@@ -58,10 +58,10 @@ async function ensureSeedOpen(page: Page): Promise<void> {
     await welcome.waitFor({ state: 'detached', timeout: 15_000 })
   }
   const chat = page.getByRole('tab', { name: 'Chat', exact: true })
-  // Search lives in the shell's shared box; focus it before filling.
-  const searchButton = page.getByRole('button', { name: 'Search', exact: true })
+  // Search lives in the Workspace browser's own control; expand it before filling.
+  const searchButton = page.getByRole('button', { name: 'Search sessions', exact: true })
   await searchButton.click()
-  const search = page.getByPlaceholder('Search sessions or pipelines…', { exact: false })
+  const search = page.getByPlaceholder('Search sessions...')
   if (await chat.count() === 0) {
     await search.fill('WATERFALL')
     const result = page.getByRole('tree', { name: 'Search results' }).getByRole('treeitem')
@@ -183,10 +183,10 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
     // seeded Ungrouped bucket row is the final user-visible barrier before
     // editing search (the compact layout dropped group session counts).
     await page.getByText('Ungrouped', { exact: true }).waitFor({ timeout: 30_000 })
-    // Search lives in the shell's shared box; focus it before filling.
-    const searchButton = page.getByRole('button', { name: 'Search', exact: true })
+    // Search lives in the Workspace browser's own control; expand it before filling.
+    const searchButton = page.getByRole('button', { name: 'Search sessions', exact: true })
     await searchButton.click()
-    const search = page.getByPlaceholder('Search sessions or pipelines…', { exact: false })
+    const search = page.getByPlaceholder('Search sessions...')
     // The cold row has not been opened, so only the persisted log can satisfy
     // this query. First search lazily reconciles the SQLite content index.
     await search.fill('zzzqx-no-such-session')

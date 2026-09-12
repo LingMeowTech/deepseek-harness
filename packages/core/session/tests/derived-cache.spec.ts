@@ -24,6 +24,7 @@ describe('derived-message cache', () => {
     const session = Session.create(SessionId('reasoning-current-turn'))
     const reasoningMessage = (turn: number, step: number, text: string) => ({
       turn, step,
+      stream: [],
       message: createMessage({
         role: 'assistant' as const,
         content: [

@@ -16,24 +16,27 @@ function usage(overrides: Partial<Usage> = {}): Usage {
 
 describe('mapUsage reasoningTokens', () => {
   it('omits reasoningTokens when pi-ai reports no reasoning breakdown', () => {
-    expect(mapUsage(usage({ input: 10, output: 5 }))).toEqual({
+    expect(mapUsage(usage({ input: 10, output: 5, totalTokens: 15 }))).toEqual({
       inputTokens: 10,
       outputTokens: 5,
+      totalTokens: 15,
     })
   })
 
   it('maps a zero reasoning count to reasoningTokens: 0', () => {
-    expect(mapUsage(usage({ input: 10, output: 5, reasoning: 0 }))).toEqual({
+    expect(mapUsage(usage({ input: 10, output: 5, totalTokens: 15, reasoning: 0 }))).toEqual({
       inputTokens: 10,
       outputTokens: 5,
+      totalTokens: 15,
       reasoningTokens: 0,
     })
   })
 
   it('passes a positive reasoning count through unchanged', () => {
-    expect(mapUsage(usage({ input: 10, output: 123, reasoning: 123 }))).toEqual({
+    expect(mapUsage(usage({ input: 10, output: 123, totalTokens: 133, reasoning: 123 }))).toEqual({
       inputTokens: 10,
       outputTokens: 123,
+      totalTokens: 133,
       reasoningTokens: 123,
     })
   })

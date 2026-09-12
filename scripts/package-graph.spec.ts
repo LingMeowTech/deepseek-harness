@@ -11,19 +11,26 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
 })
 
-function fixture(packages: Readonly<Record<string, readonly string[]>>): string {
+function tempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'dsh-package-graph-'))
   roots.push(root)
+  return root
+}
+
+/** Write one workspace manifest with explicit full package names. */
+function writeManifest(root: string, leaf: string, name: string, peers: readonly string[]): void {
+  const directory = join(root, 'packages', 'client', leaf)
+  mkdirSync(directory, { recursive: true })
+  writeFileSync(join(directory, 'package.json'), `${JSON.stringify({
+    name,
+    peerDependencies: Object.fromEntries(peers.map(peer => [peer, 'workspace:^'])),
+  }, null, 2)}\n`)
+}
+
+function fixture(packages: Readonly<Record<string, readonly string[]>>): string {
+  const root = tempRoot()
   for (const [name, dependencies] of Object.entries(packages)) {
-    const directory = join(root, 'packages', 'client', name)
-    mkdirSync(directory, { recursive: true })
-    writeFileSync(join(directory, 'package.json'), `${JSON.stringify({
-      name: `@deepseek-ai/dsh-${name}`,
-      peerDependencies: Object.fromEntries(dependencies.map(dependency => [
-        `@deepseek-ai/dsh-${dependency}`,
-        'workspace:^',
-      ])),
-    }, null, 2)}\n`)
+    writeManifest(root, name, `@deepseek-ai/dsh-${name}`, dependencies.map(dependency => `@deepseek-ai/dsh-${dependency}`))
   }
   return root
 }
@@ -48,6 +55,15 @@ describe('collectPackageGraph', () => {
 
     expect(() => collectPackageGraph(root, ['client'], 'fixture'))
       .toThrow('fixture: @deepseek-ai/dsh-consumer references missing in-repo peer @deepseek-ai/dsh-missing')
+  })
+
+  it('rejects two scopes collapsing to one graph name', () => {
+    const root = tempRoot()
+    writeManifest(root, 'upstream', '@deepseek-ai/dsh-twin', [])
+    writeManifest(root, 'fork', '@lingmeow.tech/dsh-twin', [])
+
+    expect(() => collectPackageGraph(root, ['client'], 'fixture'))
+      .toThrow("fixture: 'twin' names two workspace packages")
   })
 })
 

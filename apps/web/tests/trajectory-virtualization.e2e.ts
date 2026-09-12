@@ -68,10 +68,10 @@ interface RowAnchor {
 }
 
 async function openSeed(page: Page): Promise<void> {
-  // Search lives in the shell's shared box; focus it before filling.
-  const searchButton = page.getByRole('button', { name: 'Search', exact: true })
+  // Search lives in the Workspace browser's own control; expand it before filling.
+  const searchButton = page.getByRole('button', { name: 'Search sessions', exact: true })
   await searchButton.click()
-  const search = page.getByRole('textbox', { name: 'Search sessions or pipelines…', exact: true })
+  const search = page.getByPlaceholder('Search sessions...')
   await search.fill(FIXTURE.markers.user(1))
   const result = page.getByRole('tree', { name: 'Search results' }).getByRole('treeitem')
   await expect.poll(() => result.count(), { timeout: 60_000 }).toBe(1)

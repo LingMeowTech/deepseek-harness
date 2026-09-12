@@ -430,6 +430,81 @@ describe('goal tool state transitions', () => {
     expect(block.text).toContain("Do not call any more tools in this run; further work waits for the user's next instruction.")
   })
 
+  it('suppresses the wrap-up context for structured-output sessions (pipeline-worker preset)', async () => {
+    const workerSession = Session.create(SessionId('goal-tool-pipeline-worker'), undefined, {
+      version: SESSION_FORMAT_VERSION,
+      id: SessionId('goal-tool-pipeline-worker'),
+      createdAt: Date.now(),
+      agentPreset: 'pipeline-worker',
+      isSeeded: false,
+    })
+    const { ctx, root } = await harness({}, workerSession)
+    const humanTurn = openTurn(root, { kind: 'user' })
+    const created = ctx.goals.create(root.agent, { objective: 'emit pure json' })
+    closeTurn(root, humanTurn)
+    openTurn(root, {
+      kind: 'goal', goalId: created.id, revision: created.revision, round: 1,
+    })
+    const complete = await execute(ctx, 'update_goal', {
+      goal_id: created.id, revision: created.revision, action: 'complete',
+    }, root.agent)
+    expect(resultGoal(complete)).toMatchObject({ phase: 'complete' })
+    expect(complete.concludesTurn).toBeUndefined()
+    expect(complete.additionalContexts).toBeUndefined()
+  })
+
+  it('keeps the wrap-up context when no configured preset suppresses the session', async () => {
+    const workerSession = Session.create(SessionId('goal-tool-unlisted-worker'), undefined, {
+      version: SESSION_FORMAT_VERSION,
+      id: SessionId('goal-tool-unlisted-worker'),
+      createdAt: Date.now(),
+      agentPreset: 'pipeline-worker',
+      isSeeded: false,
+    })
+    const { ctx, root } = await harness({ structuredOutputPresets: [] }, workerSession)
+    const humanTurn = openTurn(root, { kind: 'user' })
+    const created = ctx.goals.create(root.agent, { objective: 'emit pure json' })
+    closeTurn(root, humanTurn)
+    openTurn(root, {
+      kind: 'goal', goalId: created.id, revision: created.revision, round: 1,
+    })
+    const complete = await execute(ctx, 'update_goal', {
+      goal_id: created.id, revision: created.revision, action: 'complete',
+    }, root.agent)
+    expect(resultGoal(complete)).toMatchObject({ phase: 'complete' })
+    const contexts = complete.additionalContexts ?? []
+    expect(contexts).toHaveLength(1)
+    const block = contexts[0]?.content[0]
+    if (block?.type !== 'text') throw new Error('expected one text wrap-up block')
+    expect(block.text).toContain('<goal_complete>')
+  })
+
+  it('suppresses the wrap-up context for structured-output blocked reporting too', async () => {
+    const workerSession = Session.create(SessionId('goal-tool-pipeline-worker'), undefined, {
+      version: SESSION_FORMAT_VERSION,
+      id: SessionId('goal-tool-pipeline-worker'),
+      createdAt: Date.now(),
+      agentPreset: 'pipeline-worker',
+      isSeeded: false,
+    })
+    const { ctx, root } = await harness({ blockedAfterConsecutiveRounds: 1 }, workerSession)
+    const humanTurn = openTurn(root, { kind: 'user' })
+    const created = ctx.goals.create(root.agent, { objective: 'emit pure json' })
+    closeTurn(root, humanTurn)
+    openTurn(root, {
+      kind: 'goal', goalId: created.id, revision: created.revision, round: 1,
+    })
+    const blocked = await execute(ctx, 'update_goal', {
+      goal_id: created.id,
+      revision: created.revision,
+      action: 'blocked',
+      blocked_reason: 'A required credential is still unavailable.',
+    }, root.agent)
+    expect(resultGoal(blocked)).toMatchObject({ phase: 'blocked' })
+    expect(blocked.concludesTurn).toBeUndefined()
+    expect(blocked.additionalContexts).toBeUndefined()
+  })
+
   it('completes without a wrap-up instruction under direct human authority', async () => {
     const { ctx, root } = await harness()
     openTurn(root, { kind: 'user' })
@@ -653,5 +728,17 @@ describe('goal tool state transitions', () => {
     })
     expect(blocked.concludesTurn).toBeUndefined()
     expect(blocked.additionalContexts).toBeUndefined()
+  })
+})
+
+describe('isStructuredOutputSession', () => {
+  it('recognizes a preset named by the configured suppression list', () => {
+    expect(isStructuredOutputSession({ agentPreset: 'pipeline-worker' }, ['pipeline-worker'])).toBe(true)
+  })
+
+  it('rejects absent presets, unlisted presets, and an empty configuration', () => {
+    expect(isStructuredOutputSession({}, ['pipeline-worker'])).toBe(false)
+    expect(isStructuredOutputSession({ agentPreset: 'default' }, ['pipeline-worker'])).toBe(false)
+    expect(isStructuredOutputSession({ agentPreset: 'pipeline-worker' }, [])).toBe(false)
   })
 })

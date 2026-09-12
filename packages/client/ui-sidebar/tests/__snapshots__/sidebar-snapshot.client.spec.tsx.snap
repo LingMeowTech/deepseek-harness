@@ -85,10 +85,6 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
         data-slot="sidebar.workspaces"
         style="display: contents;"
       />
-      <div
-        data-slot="sidebar.pipelines"
-        style="display: contents;"
-      />
     </div>
     <div
       class="footArea"
@@ -235,7 +231,7 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
         <input
           class="searchInput"
           maxlength="500"
-          placeholder="Search sessions or pipelines…"
+          placeholder="Search sessions…"
           type="text"
           value=""
         />
@@ -246,10 +242,6 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
     >
       <div
         data-slot="sidebar.workspaces"
-        style="display: contents;"
-      />
-      <div
-        data-slot="sidebar.pipelines"
         style="display: contents;"
       />
     </div>
@@ -398,7 +390,7 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
         <input
           class="searchInput"
           maxlength="500"
-          placeholder="搜索会话或管线…"
+          placeholder="搜索会话…"
           type="text"
           value=""
         />
@@ -409,10 +401,6 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
     >
       <div
         data-slot="sidebar.workspaces"
-        style="display: contents;"
-      />
-      <div
-        data-slot="sidebar.pipelines"
         style="display: contents;"
       />
     </div>

@@ -984,6 +984,16 @@ describe('mapStopReason / mapUsage', () => {
     })
     expect(mapUsage(usage(10, 5))).toEqual({ inputTokens: 10, outputTokens: 5, totalTokens: 15 })
   })
+
+  it('maps reasoning tokens only when present', () => {
+    expect(mapUsage({ ...usage(10, 5), reasoning: 7 })).toEqual({
+      inputTokens: 10,
+      outputTokens: 5,
+      totalTokens: 15,
+      reasoningTokens: 7,
+    })
+    expect(mapUsage(usage(10, 5))).not.toHaveProperty('reasoningTokens')
+  })
 })
 
 describe('toStreamChunks edge branches', () => {

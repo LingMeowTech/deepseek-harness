@@ -64,7 +64,6 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
           return <div data-testid="footer-action-seat" data-wide={owner.wide} />
         }
         regionOwner = owner as SidebarSectionOwnerProps
-        if (key === 'sidebar.pipelines') return <div data-testid="pipeline-region" data-wide={owner.wide} />
         return <div data-testid="region" data-wide={owner.wide} />
       }) as SidebarRootComponentProps['renderSlot']}
     />

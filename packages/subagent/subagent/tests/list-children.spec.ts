@@ -360,7 +360,7 @@ describe('SubagentRuntime.listChildren', () => {
     }
     // Live creation order is deliberately shuffled against the expected
     // result: same-createdAt ties break on id, different createdAt orders
-    // descending (newest child first).
+    // ascending.
     const late = liveChild(parent.id, '00000000-0000-4000-8000-000000000009', 9, 'late child')
     const tieB = liveChild(parent.id, '00000000-0000-4000-8000-000000000002', 5, 'tie b')
     const tieA = liveChild(parent.id, '00000000-0000-4000-8000-000000000001', 5, 'tie a')
@@ -368,7 +368,7 @@ describe('SubagentRuntime.listChildren', () => {
     const fork = ctx.sessions.fork(parent.session, undefined, SessionId('plain-fork'))
     await ctx.sessions.flush(fork)
     const entries = await ctx.subagents.listChildren(parent.id)
-    expect(entries.map(entry => entry.id)).toEqual([late, tieB, tieA])
+    expect(entries.map(entry => entry.id)).toEqual([tieA, tieB, late])
     expect(entries.every(entry => entry.kind === 'child')).toBe(true)
   })
 
@@ -848,11 +848,11 @@ describe('SubagentRuntime.listChildren', () => {
     const entries = await ctx.subagents.listChildren(parent.id)
     expect(entries).toEqual([
       {
-        kind: 'child', id: compacted, label: 'twin child', mode: 'continuable',
+        kind: 'child', id: plain, label: 'twin child', mode: 'continuable',
         activity: 'inactive', hasChildren: false,
       },
       {
-        kind: 'child', id: plain, label: 'twin child', mode: 'continuable',
+        kind: 'child', id: compacted, label: 'twin child', mode: 'continuable',
         activity: 'inactive', hasChildren: false,
       },
     ])
@@ -1145,16 +1145,16 @@ describe('SubagentRuntime.listDescendants', () => {
     const entries = await ctx.subagents.listDescendants(parent.id)
     expect(entries).toEqual([
       {
-        kind: 'child', id: childB, label: 'branch b', mode: 'continuable',
-        activity: 'inactive', hasChildren: false, parentId: parent.id, depth: 1,
-      },
-      {
         kind: 'child', id: childA, label: 'branch a', mode: 'continuable',
         activity: 'inactive', hasChildren: true, parentId: parent.id, depth: 1,
       },
       {
         kind: 'child', id: grandchild, label: 'under a', mode: 'continuable',
         activity: 'inactive', hasChildren: false, parentId: childA, depth: 2,
+      },
+      {
+        kind: 'child', id: childB, label: 'branch b', mode: 'continuable',
+        activity: 'inactive', hasChildren: false, parentId: parent.id, depth: 1,
       },
     ])
   })

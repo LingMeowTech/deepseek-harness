@@ -23,14 +23,19 @@ function mount(props: {
   copyText?: string
   copyLabel?: string
   copiedLabel?: string
+  pinLabel?: string
+  unpinLabel?: string
 } = {}) {
+  const { copyLabel = 'Copy', copiedLabel = 'Copied', pinLabel = 'Pin card', unpinLabel = 'Unpin card', ...rest } = props
   const view = render(
     <HoverCard
       anchor={<span>row</span>}
       content={<div>card body</div>}
-      copyLabel={props.copyLabel ?? 'Copy'}
-      copiedLabel={props.copiedLabel ?? 'Copied'}
-      {...props}
+      copyLabel={copyLabel}
+      copiedLabel={copiedLabel}
+      pinLabel={pinLabel}
+      unpinLabel={unpinLabel}
+      {...rest}
     />,
   )
   const anchor = screen.getByText('row')
@@ -242,7 +247,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      const card = screen.getByRole('button', { name: '复制: value' })
+      const card = screen.getByRole('button', { name: 'Copy: value' })
       fireEvent.keyDown(card, { key: 'Escape' })
       expect(writeText).not.toHaveBeenCalled()
       await act(async () => { fireEvent.keyDown(card, { key: 'Enter' }) })
@@ -262,7 +267,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      await act(async () => { fireEvent.click(screen.getByRole('button', { name: '复制: value' })) })
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy: value' })) })
       expect(screen.queryByText('Copied')).toBeNull()
       expect(screen.getByText('card body')).toBeTruthy()
     } finally {
@@ -277,7 +282,7 @@ describe('HoverCard', () => {
       const { view, wrapper } = mount({ copyText: 'value' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      await act(async () => { fireEvent.click(screen.getByRole('button', { name: '复制: value' })) })
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy: value' })) })
       expect(vi.getTimerCount()).toBe(1)
       view.unmount()
       expect(vi.getTimerCount()).toBe(0)
@@ -293,7 +298,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      await act(async () => { fireEvent.click(screen.getByRole('button', { name: '复制: value' })) })
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Copy: value' })) })
       expect(screen.getByRole('status').textContent).toBe('Copied')
       fireEvent.pointerLeave(wrapper)
       act(() => { vi.advanceTimersByTime(POINTER_GRACE_MS) })
@@ -314,7 +319,7 @@ describe('HoverCard', () => {
       const { view, wrapper } = mount({ copyText: 'value' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      fireEvent.click(screen.getByRole('button', { name: '复制: value' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Copy: value' }))
       expect(writeText).toHaveBeenCalledOnce()
       view.unmount()
       await act(async () => { acceptWrite?.() })
@@ -332,7 +337,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      fireEvent.click(screen.getByRole('button', { name: '复制: value' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Copy: value' }))
       fireEvent.pointerLeave(wrapper)
       act(() => { vi.advanceTimersByTime(POINTER_GRACE_MS) })
       fireEvent.pointerEnter(wrapper)
@@ -353,7 +358,7 @@ describe('HoverCard', () => {
       const { wrapper } = mount({ copyText: 'value', copiedLabel: 'Copied' })
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
-      const card = screen.getByRole('button', { name: '复制: value' })
+      const card = screen.getByRole('button', { name: 'Copy: value' })
       fireEvent.click(card)
       fireEvent.click(card)
       expect(writeText).toHaveBeenCalledOnce()
@@ -382,6 +387,8 @@ describe('HoverCard', () => {
         content={<div>card body</div>}
         copyLabel="Copy"
         copiedLabel="Copied"
+        pinLabel="Pin card"
+        unpinLabel="Unpin card"
         disabled
       />,
     )
@@ -442,16 +449,25 @@ describe('HoverCard', () => {
   })
 
   describe('pinned', () => {
-    const pinName = (pinned: boolean) => (pinned ? '取消固定' : '固定')
+    const pinName = (pinned: boolean) => (pinned ? 'Unpin card' : 'Pin card')
 
     /** Open the card (default dwell) and return the wrapper for pointer events. */
-    function openCard(): HTMLElement {
-      const { wrapper } = mount()
+    function openCard(props: Parameters<typeof mount>[0] = {}): HTMLElement {
+      const { wrapper } = mount(props)
       fireEvent.pointerEnter(wrapper)
       act(() => { vi.advanceTimersByTime(500) })
       expect(screen.getByText('card body')).toBeTruthy()
       return wrapper
     }
+
+    it('names the pin control from the caller-supplied label props', () => {
+      const wrapper = openCard({ pinLabel: 'Halten', unpinLabel: 'Loslassen' })
+      fireEvent.click(screen.getByRole('button', { name: 'Halten' }))
+      expect(screen.getByRole('button', { name: 'Loslassen' })).toBeTruthy()
+      fireEvent.pointerLeave(wrapper)
+      act(() => { vi.advanceTimersByTime(POINTER_GRACE_MS * 5) })
+      expect(screen.getByText('card body')).toBeTruthy()
+    })
 
     it('pinning keeps the card open after the pointer leaves', () => {
       const wrapper = openCard()

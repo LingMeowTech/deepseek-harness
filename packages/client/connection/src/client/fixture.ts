@@ -3947,6 +3947,8 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         case 'session/list': return sessionApi.list(
           args._request as Parameters<FixtureSessionApi['list']>[0],
         )
+        // The fixture serves no tag writes, so every session reads as untagged.
+        case 'session/tagsList': return sessionOk({ tags: [] })
         case 'session/search': return sessionApi.search(
           request as Parameters<FixtureSessionApi['search']>[0],
           callSignal,
