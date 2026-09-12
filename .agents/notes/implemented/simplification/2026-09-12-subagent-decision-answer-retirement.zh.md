@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-本 fork 曾构建一条 decision-answer 通道，让子代理在真正的抉择点（两条实现路线、缺少某项输入）暂停，提出带类型的问题，并携带父侧答复作为上下文续跑。此前操作者只能把临时文本插入子代理转录，既不产生类型，也无法确定性地回灌。该通道实现在宿主 apiproxy 平面上：`packages/subagent/subagent/src/decision-answer.ts` 持有 `DecisionAnswer` 能力，`continuation.ts` 把答复回灌转录，`packages/host/apiproxy` 经 RPC 暴露 `subagents.questions` / `subagents.answer`，并由 `packages/api/remotes/src/agent-lookup.ts` 把答复路由到正确的子代理。
+本 fork 曾构建一条 decision-answer 通道，让子代理在真正的抉择点（两条实现路线、缺少某项输入）暂停，提出带类型的问题，并携带父侧答复作为上下文续跑。此前操作者只能把临时文本插入子代理转录，既不产生类型，也无法确定性地回灌。该通道实现在宿主 apiproxy 平面上：subagent 包的 `src/decision-answer.ts` 持有 `DecisionAnswer` 能力，`continuation.ts` 把答复回灌转录，`packages/host/apiproxy` 经 RPC 暴露 `subagents.questions` / `subagents.answer`，把答复路由回停放该问题的子代理。
 
 此后上游把 apiproxy 平面拆解为 `packages/api/session-controller`，并以 `ContinuableActivationRegistry` 加 `ContinuableStart` 重建子代理续跑。若保留该通道，就意味着恢复一个上游已删除的传输层，并在新的 controller 内维护第二条并行答复路径。
 
@@ -14,9 +14,9 @@ Status: implemented
 
 该通道被移除，其决策收编于本 note。
 
-- `packages/subagent/subagent/src/decision-answer.ts` 已删除；`SubagentRuntime` 不再携带 `pendingQuestions`，`SubagentSendMessageOptions` 不再携带 `answers`。
+- subagent 包的 `src/decision-answer.ts` 已删除；`SubagentRuntime` 不再携带 `pendingQuestions`，`SubagentSendMessageOptions` 不再携带 `answers`。
 - `subagents.questions` / `subagents.answer` 两个 RPC 与 `DecisionAnswer*` / `DecisionAskQuestion` wire 类型已无处安放：它们原本住在被删除的 apiproxy 包里，而 session controller 不声明其中任何一个。
-- `packages/api/remotes/src/agent-lookup.ts` 只保留其余调用方仍在用的子代理查找；答复路由职责已消失。
+- 没有任何路由层只承担答复职责：停放的问题在进程内由 `followup({ answers })` 结算，答复路径本就在该模块内，模块之外并无并行实现。
 - 锁定线上结构的契约测试随传输层一并消失。如今告诉操作者子代理正在等待的，是上游的 continuable-activation 表面，其驻留与投递由 `ContinuableActivationRegistry` 持有。
 
 ### 为什么这项能力没有缺位

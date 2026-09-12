@@ -6,7 +6,7 @@ English | [中文](2026-09-12-subagent-decision-answer-retirement.zh.md)
 
 ## Problem
 
-The fork built a decision-answer channel so a subagent could pause on a genuine choice — two implementation arms, a missing input — raise a typed question, and resume with the parent's answer as context. Operators previously had to interleave ad-hoc text into a subagent transcript, which typed nothing and fed nothing back deterministically. The channel was implemented on the host apiproxy plane: `packages/subagent/subagent/src/decision-answer.ts` held the `DecisionAnswer` capability, `continuation.ts` fed the answer back into the transcript, and `packages/host/apiproxy` exposed `subagents.questions` / `subagents.answer` over RPC with `packages/api/remotes/src/agent-lookup.ts` routing an answer to the right subagent.
+The fork built a decision-answer channel so a subagent could pause on a genuine choice — two implementation arms, a missing input — raise a typed question, and resume with the parent's answer as context. Operators previously had to interleave ad-hoc text into a subagent transcript, which typed nothing and fed nothing back deterministically. The channel was implemented on the host apiproxy plane: the subagent package's `src/decision-answer.ts` held the `DecisionAnswer` capability, `continuation.ts` fed the answer back into the transcript, and `packages/host/apiproxy` exposed `subagents.questions` / `subagents.answer` over RPC, routing an answer to the child that parked the ask.
 
 Upstream then dissolved the apiproxy plane into `packages/api/session-controller` and rebuilt subagent continuation around `ContinuableActivationRegistry` plus `ContinuableStart`. Keeping the channel would have meant restoring a transport upstream deleted and maintaining a second, parallel answer path inside the new controller.
 
@@ -14,9 +14,9 @@ Upstream then dissolved the apiproxy plane into `packages/api/session-controller
 
 The channel is removed and its decision is consolidated here.
 
-- `packages/subagent/subagent/src/decision-answer.ts` is deleted; `SubagentRuntime` no longer carries `pendingQuestions`, and `SubagentSendMessageOptions` no longer carries `answers`.
+- The subagent package's `src/decision-answer.ts` is deleted; `SubagentRuntime` no longer carries `pendingQuestions`, and `SubagentSendMessageOptions` no longer carries `answers`.
 - The `subagents.questions` / `subagents.answer` RPCs and the `DecisionAnswer*` / `DecisionAskQuestion` wire types have no home: they lived in the deleted apiproxy package, and the session controller declares none of them.
-- `packages/api/remotes/src/agent-lookup.ts` keeps only the subagent lookup the remaining callers use; the answer-routing role is gone.
+- No routing layer keeps an answer-only role: the parked ask was settled in-process through `followup({ answers })`, so the module carried its own answer path and nothing outside it did.
 - The contract tests that pinned the wire shape are gone with the transport. What tells the operator a subagent is waiting is now the upstream continuable-activation surface, whose residency and delivery `ContinuableActivationRegistry` owns.
 
 ### Why the capability is not missed

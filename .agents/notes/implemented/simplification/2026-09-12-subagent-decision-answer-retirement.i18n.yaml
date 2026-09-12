@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/simplification/2026-09-12-subagent-decision-answer-retirement.md
-2026-09-12-subagent-decision-answer-retirement.md: d129016a36bc3b4e368ca32424a95320cd2e02d4
-2026-09-12-subagent-decision-answer-retirement.zh.md: eeffc1b7d45534940ee1edf0adc8ebe5366ed9e8
+2026-09-12-subagent-decision-answer-retirement.md: ed64a7f3d38dbc3e1b02cd68f8f6c30cdf32401c
+2026-09-12-subagent-decision-answer-retirement.zh.md: 365d6992a9f8f586567eaf95aedde4cdd71642d4
