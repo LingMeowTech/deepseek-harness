@@ -80,11 +80,12 @@
     - id: session-tags
       name: '@lingmeow.tech/dsh-session-tags'
 
-    # LMO pipeline seam（`ctx.lmoPipeline` + model-facing `pipeline_*` tools）已迁至
-    # plugins 仓独立包（015 落点：`@lingmeow.tech/dsh-lmtech-pipeline-http` /
-    # `dsh-lmtech-tool-pipeline`），经 dsh 用户 profile 的插件清单装配；
-    # 官方 bundle 不再挂载 `dsh-lmo-pipeline-http` / `dsh-tool-lmo-pipeline` row。
-    # （020 T071：015 归属面收敛，删除已迁出包的行）
+    # The LMO pipeline seam (`ctx.lmoPipeline` plus the model-facing
+    # `pipeline_*` tools) moved to the plugins repo's own packages
+    # (`@lingmeow.tech/dsh-lmtech-pipeline-http` / `dsh-lmtech-tool-pipeline`,
+    # 015) and mounts from the dsh user profile's plugin list instead, so this
+    # official bundle keeps no `dsh-lmo-pipeline-http` / `dsh-tool-lmo-pipeline`
+    # row (020 T071).
 
     - id: session-reference
       name: '@deepseek-ai/dsh-session-reference'

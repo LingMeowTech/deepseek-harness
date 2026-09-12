@@ -1,8 +1,8 @@
 /**
  * Durable session-tag registry (`ctx.sessionTags`): string labels stored in a
- * storage-domain table keyed by session id. `domain/changed` on the
- * `session_tags` domain is the authoritative change feed; the host API proxy
- * projects it into `host/session-tags-changed` frames.
+ * storage-domain table keyed by session id. Each write lands durably before
+ * the `session_tags` domain emits `domain/changed`; no host stream frame
+ * carries tag changes, so readers reload through `session.tags.list`.
  * @module @lingmeow.tech/dsh-session-tags
  */
 

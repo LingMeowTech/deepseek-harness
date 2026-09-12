@@ -17,8 +17,9 @@ export const sessionTagRecord = z.object({
 export type SessionTagRecord = z.infer<typeof sessionTagRecord>
 
 /**
- * Session-tags domain: `tags` rows keyed by {@link SessionId}. The table's
- * `domain/changed` events are the notification source for host stream frames.
+ * Session-tags domain: `tags` rows keyed by {@link SessionId}. Each landed
+ * write emits `domain/changed` for in-process subscribers; no host stream
+ * frame projects these events.
  */
 export const sessionTagsDomainSpec = defineDomain({
   name: 'session_tags',

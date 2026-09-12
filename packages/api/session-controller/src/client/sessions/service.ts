@@ -83,9 +83,9 @@ export interface SessionListState {
    */
   jobsBySession: Readonly<Record<SessionId, readonly JobView[]>>
   /**
-   * Durable per-session tags: cold-start pull plus live
-   * `host/session-tags-changed` frames (see SessionManager). Absence means
-   * "untagged", never "unread"; pipeline sessions carry `pipeline_id`.
+   * Durable per-session tags: the `session.tags.list` cold-start pull, with no
+   * change frame behind it (see SessionManager). Absence means "untagged",
+   * never "unread"; pipeline sessions carry `pipeline_id`.
    */
   tagsBySession?: Readonly<Record<SessionId, readonly string[]>>
   /** Current session's catalog-derived address, absent on ordinary navigation. */
@@ -279,8 +279,8 @@ export class ClientSessions implements ISessions {
   }
 
   /**
-   * Replace one session's complete durable tag list; the Host's
-   * `host/session-tags-changed` frame is the only view refresh path.
+   * Replace one session's complete durable tag list; no frame follows the
+   * write, so the next list refresh is how the view converges.
    * @param sessionId - the tagged session.
    * @param tags - the complete replacement list, in display order.
    * @throws when the Host rejects the write.
@@ -290,8 +290,9 @@ export class ClientSessions implements ISessions {
   }
 
   /**
-   * Remove named durable tags from one session; refresh rides the Host's
-   * `host/session-tags-changed` frame, never a local echo.
+   * Remove named durable tags from one session; like
+   * {@link setSessionTags}, no frame follows the write and the next list
+   * refresh converges the view, never a local echo.
    * @param sessionId - the tagged session.
    * @param tags - tag names to remove.
    * @throws when the Host rejects the write.

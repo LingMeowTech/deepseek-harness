@@ -6,7 +6,7 @@ LMO 管线能力——service seam、HTTP Provider、面向模型的 `pipeline_*
 
 ## 会话标签
 
-pipeline 会话是普通 DSH 会话加上来自 [`dsh-session-tags`](../../packages/session/session-tags) 的持久标签：`pipeline_id`、`state_id`、`job_id` 与 `node_id`。标签写入通过 host 流发布 `host/session-tags-changed`。
+pipeline 会话是普通 DSH 会话加上来自 [`dsh-session-tags`](../../packages/session/session-tags) 的持久标签：`pipeline_id`、`state_id`、`job_id` 与 `node_id`。标签写入直接落到 `session_tags` 存储域，并在 RPC 结果里回传存储后的列表；host 流上没有任何帧承载标签变更，因此读取方要在下一次 `session.tags.list` 才能看到别的客户端写入。
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 

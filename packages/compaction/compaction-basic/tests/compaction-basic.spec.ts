@@ -892,7 +892,8 @@ describe('optional model-free tool-result pruning', () => {
     expect(await compactIfNeeded(compact, session)).not.toBeNull()
     const after = ctx.tokenMeter.measure(session).totalTokens
 
-    // 压缩后上下文体积较改前 ≥50%（T2a 对齐 codex compact token budget / summary 替换）
+    // T2a: summary replacement must cut surfaced context volume by at least
+    // half, the codex compact token-budget bar.
     expect(after).toBeLessThanOrEqual(before * 0.5)
     expect(compact.calls).toHaveLength(1)
   })

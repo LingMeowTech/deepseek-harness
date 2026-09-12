@@ -8,8 +8,9 @@
 
 import { expect } from 'vitest'
 import { Inject, RegistryService, ValidationError } from '@deepseek-ai/cordis'
-// cordis 4.0.1 的 lib 产物把 FiberState(const enum) 内联掉、不导出运行时值；
-// vite/esbuild 对跨文件 const enum 无法内联，故从源码直接导入以获得运行时枚举。
+// cordis 4.0.1's lib output inlines FiberState (a const enum) away and exports
+// no runtime value; vite/esbuild cannot inline a cross-file const enum either,
+// so the source import is the only way to reach the runtime enum.
 import { FiberState } from '../vendor/cordis/src/fiber.ts'
 import type { Context, Plugin } from '@deepseek-ai/cordis'
 import InvariantRegistry from '@deepseek-ai/dsh-invariants'

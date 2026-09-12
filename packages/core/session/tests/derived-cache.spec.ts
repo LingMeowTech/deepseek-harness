@@ -37,7 +37,8 @@ describe('derived-message cache', () => {
     session.append('assistant/message', reasoningMessage(1, 1, 'turn-one'), { surfaceOp: 'append' })
     session.append('assistant/message', reasoningMessage(2, 1, 'turn-two'), { surfaceOp: 'append' })
     const derived = session.deriveMessages()
-    // 历史轮（turn 1）reasoning 被过滤，保留 text；当前轮（turn 2）reasoning 保留
+    // Codex ReasoningContext's current-turn default: turn 1 is history, so its
+    // reasoning is dropped while the text stays; turn 2 is current and keeps both.
     expect(derived[0]!.content.some(b => b.type === 'reasoning')).toBe(false)
     expect(derived[0]!.content.some(b => b.type === 'text' && b.text === 'turn-one')).toBe(true)
     expect(derived[1]!.content.some(b => b.type === 'reasoning' && b.text === 'thought-2')).toBe(true)

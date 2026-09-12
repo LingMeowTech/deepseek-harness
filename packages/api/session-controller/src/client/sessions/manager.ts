@@ -135,9 +135,10 @@ export class SessionManager {
    */
   private readonly jobsBySession = new Map<SessionId, readonly JobView[]>()
   /**
-   * Durable per-session tags, seeded by the cold-start pull and updated
-   * last-wins from `host/session-tags-changed`. Absence means "untagged",
-   * never "unread"; pipeline sessions carry the `pipeline_id` tag.
+   * Durable per-session tags, seeded by the cold-start `session.tags.list`
+   * pull on each list refresh. No change frame carries tag writes, so another
+   * client's write lands on the next pull. Absence means "untagged", never
+   * "unread"; pipeline sessions carry the `pipeline_id` tag.
    */
   private readonly tagsBySession = new Map<SessionId, readonly string[]>()
   /** Reference-stable tags projection (the itemsCache precedent: reused while unchanged). */
@@ -460,9 +461,9 @@ export class SessionManager {
   // ---- List API ----
 
   /**
-   * Replace one session's complete durable tag list. The Host publishes
-   * `host/session-tags-changed` after the commit and that frame alone drives
-   * every surface's refresh — this method writes nothing locally.
+   * Replace one session's complete durable tag list. The Host commits the
+   * write and sends no frame back, so this method writes nothing locally and
+   * the next list refresh converges the projection.
    * @param sessionId - the tagged session.
    * @param tags - the complete replacement list, in display order.
    * @throws when the Host rejects the write.
@@ -475,8 +476,9 @@ export class SessionManager {
   }
 
   /**
-   * Remove named durable tags from one session; like
-   * {@link setSessionTags}, the Host's changed frame is the only refresh path.
+   * Remove named durable tags from one session; like {@link setSessionTags},
+   * no frame follows the write and the next list refresh converges the
+   * projection.
    * @param sessionId - the tagged session.
    * @param tags - tag names to remove.
    * @throws when the Host rejects the write.
@@ -490,7 +492,7 @@ export class SessionManager {
 
   /**
    * Cold-start tag pull: one `session.tags.list` per listed session. A
-   * failed read leaves the row untagged until the next changed frame — tags
+   * failed read leaves the row untagged until the next list refresh — tags
    * are auxiliary to the session list and never fatal to it. A row removed
    * while a pull is in flight drops the stale response.
    * @param sessionIds - currently listed sessions.
@@ -504,7 +506,7 @@ export class SessionManager {
         this.notifier.markDirty()
       }).catch(() => {
         // Named swallow: a transient tag read fails open (row shows untagged),
-        // and the next list refresh or changed frame converges it.
+        // and the next list refresh converges it.
       })
     }
   }
@@ -568,7 +570,7 @@ export class SessionManager {
             for (const key of Object.keys(values)) store.apply(key, values[key], sessionSeqCursor(block.asOfSeq))
           }
           // Tags have no list baseline; re-pull per session after every list
-          // refresh and let the changed frame take over between pulls.
+          // refresh, the only path that picks up another client's write.
           this.refreshTags(this.summaries.map(summary => summary.sessionId))
         } else {
           this.listState = 'error'

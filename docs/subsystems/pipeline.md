@@ -6,7 +6,7 @@ The LMO pipeline capability — its service seam, HTTP provider, model-facing `p
 
 ## Session tags
 
-Pipeline sessions are ordinary DSH sessions plus durable tags from [`dsh-session-tags`](../../packages/session/session-tags): `pipeline_id`, `state_id`, `job_id`, and `node_id`. Tag writes publish `host/session-tags-changed` on the host stream.
+Pipeline sessions are ordinary DSH sessions plus durable tags from [`dsh-session-tags`](../../packages/session/session-tags): `pipeline_id`, `state_id`, `job_id`, and `node_id`. Tag writes go straight to the `session_tags` storage domain and echo the stored list back in the RPC result; no host stream frame carries them, so a reader picks up another client's write on its next `session.tags.list`.
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
