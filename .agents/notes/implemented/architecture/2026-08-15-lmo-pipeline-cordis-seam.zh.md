@@ -14,7 +14,7 @@ DSH 平台迁移需要宿主与模型都能访问 lmo-server 的管线数据（p
 
 HTTP Provider 直接使用 Node 全局 `fetch`。`ctx.web` fetch 是匿名公开资源的 GET-only 检索，没有自定义请求头、没有 POST/PATCH，且把非 2xx 当作结果返回，因此无法承载签名管线请求。Provider 自己负责 `METHOD\nPATH\nQUERY\nBODY_SHA256\nTIMESTAMP\nNONCE` canonical request 与 `X-Secret-Id`/`X-Timestamp`/`X-Nonce`/`X-Signature` 请求头。
 
-会话标签存储在 storage-domain 表中，而不是 session log 事件：log 是 append-only，冷会话无法在不绑定 live owner 的情况下写入；domain 表可以为任意会话 id 写入。`@deepseek-ai/dsh-session-tags` 拥有 `session_tags` domain、`ctx.sessionTags` 注册表，以及冻结的管线标签名 `pipeline_id` / `state_id` / `job_id` / `node_id`。宿主 API proxy 把 `domain/changed` 表写入投影为现有 host stream 的 `host/session-tags-changed` 帧，订阅客户端无需轮询即可更新。
+会话标签存储在 storage-domain 表中，而不是 session log 事件：log 是 append-only，冷会话无法在不绑定 live owner 的情况下写入；domain 表可以为任意会话 id 写入。`@deepseek-ai/dsh-session-tags` 拥有 `session_tags` domain、`ctx.sessionTags` 注册表，以及冻结的管线标签名 `pipeline_id` / `state_id` / `job_id` / `node_id`。写入在 `domain/changed` 通知之前已持久化；没有任何 host-stream 帧承载标签变更：消费方用 `session.tags.list` 读回持久列表，浏览器会话列表在每次列表刷新后即是如此。
 
 ## Alternatives considered
 
@@ -24,7 +24,7 @@ HTTP Provider 直接使用 Node 全局 `fetch`。`ctx.web` fetch 是匿名公开
 
 ## Consequences
 
-- seam 新增四个包与一个 host-stream 帧变体。S2 与 S4 消费 `pipeline.*` wire 类型与 `host/session-tags-changed`，无需导入 lmo-server 传输细节。
+- seam 新增四个包与一个持久标签域。S2 与 S4 消费 `pipeline.*` wire 类型，并经 `session.tags.list` 读取会话标签，无需导入 lmo-server 传输细节。
 - Provider 传输保持在 `ctx.lmoPipeline` 之后可替换；模型工具面在 Provider 切换时保持稳定。
 - 标签写入先持久化后通知，删除最后一个标签会删除存储行；`session.tags.list` 仍是重连基线。
 - 生成的 Cordis 目录在 `docs/subsystems/pipeline.md` 记录 `ctx.lmoPipeline`，并在 session 子系统页记录 `ctx.sessionTags`。

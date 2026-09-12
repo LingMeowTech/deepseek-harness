@@ -17,7 +17,7 @@ DSH 平台迁移需要一个能被 Go runner 作为单个 pipeline job spawn 的
 
 冻结的模型可见 persona（`src/prompts.ts`）钉住执行工作流、分解工作流与注入环境契约。`cordis.patch.yml` 与 `worker.cordis.yml` 内联同一字面量；`tests/bundle.spec.ts` 把三份副本钉在一起，使模型可见文本不会跨部署形态漂移。
 
-`src/pipeline-worker-tags.ts` 通过 `@deepseek-ai/dsh-session-tags` 注册表把 runner 注入的 `PIPELINE_ID` / `STATE_ID` / `JOB_ID` / `NODE_ID` 写到 worker 铸造的每个会话上，使 `session.tags.list`（以及 host 的 `session-tags-changed` 流）能识别 pipeline 会话，而无需 Go runner 维护第二套会话权威。
+`src/pipeline-worker-tags.ts` 通过 `@deepseek-ai/dsh-session-tags` 注册表把 runner 注入的 `PIPELINE_ID` / `STATE_ID` / `JOB_ID` / `NODE_ID` 写到 worker 铸造的每个会话上，使 `session.tags.list`能识别 pipeline 会话，而无需 Go runner 维护第二套会话权威。
 
 dsh-sdk subagent 后端（`subagent-dsh-sdk` 行）用 `scrubbedParentEnv()` spawn 每个子进程，该函数会丢弃 `LMO_SERVER_*`（形似凭据）与所有 `DSH_*` 名称。子进程启动同一份 `worker.cordis.yml`，其 `lmo-pipeline` 行要求 LMO 凭据，所以配置在行内 `env` 中显式重新转发 `LMO_SERVER_HOST` / `LMO_SERVER_SECRET_ID` / `LMO_SERVER_SECRET_KEY`（外加 `DEEPSEEK_*` 与 `DSH_SESSION_ROOT` 事实），在 scrub 之后合并。profile 层的同一行也转发这三个键。
 

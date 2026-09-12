@@ -6,90 +6,44 @@ English | [中文](2026-09-02-lmtech-dev-session-controller-port.zh.md)
 
 ## Problem
 
-`lmtech-dev` tracks upstream `master` (zero gap) where the 8/22–27 refactor
-(`d26acfa2e3`…) removed `packages/host/apiproxy` and rebuilt the API plane as
-`packages/api/session-controller` — an 11-file aggregate behind
-`SessionController extends TypertRemoteService`, with `SessionCommandController`
-(business commands), `SessionControlController` (event-stream broadcast), and
-all wire types centralized in `types.ts`. The client side was rebuilt onto a
-snapshot/baseline/queue-mirror model (`client/contract/`, `client/sessions/`),
-`ui-conversation` was split into `ui-chat`/`ui-session`/`ui-schedule`/
-`ui-approval`, and `client/store` was carved out of runtime.
+The 8/22–27 upstream refactor (`d26acfa2e3`…) removed `packages/host/apiproxy` and rebuilt the API plane as `packages/api/session-controller` — an aggregate behind `SessionController extends TypertRemoteService`, with `SessionCommandController`, `SessionControlController`, and all wire types in `types.ts`. The client side was rebuilt onto a snapshot/baseline/queue-mirror model (`client/contract/`, `client/sessions/`), `ui-conversation` was rebuilt, and `client/store` was carved out of runtime. The `dev` branch meanwhile carried ~55 local commits built on the removed apiproxy floor, so the two lines of work described the same features in incompatible terms.
 
-The `dev` branch carries 55 local commits building the same features on the
-removed apiproxy floor. Merging `dev` into `lmtech-dev` produces 81 conflicts:
-27 modify/delete (local edits to upstream-deleted paths) and 54 content
-conflicts. Decision: full port (option A) — adapt every retained local feature
-to the upstream structures rather than dropping or deferring.
+The [upstream sync](../../implemented/architecture/2026-09-12-024-upstream-sync.md) has since executed the port for this harness tree: it merged `c291e7961a` with upstream-first resolution and re-landed each retained fork capability on the new seam. What remains — and what this note now proposes — is the work that merge deliberately left outside this repository: the plugins-side re-seat and the outer-spec disk-governance backlog.
 
 ## Proposal
 
-### Port map
+### Landed by the sync (recorded here, not proposed)
 
-| # | Local feature (old location) | Upstream home | Action |
-|---|---|---|---|
-| 1 | subagents.answer/questions RPC (apiproxy) | `session-controller/src/agent.ts` + `types.ts` | two controller methods in the upstream style; reuse `SubagentAddress` (types.ts:371) |
-| 2 | `subagent/decision-answer.ts`, `continuation.ts` | same path | keep; verify the upstream seam |
-| 3 | `agent-lookup.ts` decision-answer routing (api/remotes) | same path (upstream evolved) | upstream base + local routing delta |
-| 4 | `packages/session/session-tags` domain | same path (new package) | keep; register the tags table in session-controller |
-| 5 | sessions tags RPC schema (apiproxy) | `list.ts` + `types.ts` | redeclare the three tag methods against the new types |
-| 6 | pipelines service (client/runtime) | upstream runtime evolution | upstream base + `PipelineRuntime` wiring |
-| 7 | `sidebar.pipelines` slot (ui-sidebar) | same path | keep local version |
-| 8 | pipeline-worker bundle + preset | same paths (new) | keep; align registration with the new bundles (sdk-app et al.) |
-| 9 | list-light `projection: 'none'` (apiproxy) | `session-controller/src/list.ts` | reimplement against the snapshot list model; first port item — upstream has no lightweight mode |
-| 10 | goal_complete wrapup suppression (tool-goal) | same path | compare-merge |
-| 11 | HoverCard pinned, hover panel, hindsight slot, inventory row slot | post-split packages (ui-chat et al.) | re-seat component by component |
-| 12 | token-meter cacheHitRatio, surface current_turn | same path | compare-merge |
-| 13 | speckit skills, docs cleanup | same path | keep as-is |
+| Former local feature | Where it lives now |
+|---|---|
+| `subagents.answer` / `subagents.questions` RPC and `decision-answer.ts` | retired; the continuable-activation surface (`ContinuableActivationRegistry`, `ContinuableStart`) owns paused-child residency and delivery |
+| apiproxy sessions-tags RPC schema | `SessionController`'s three `@Remote` verbs `tagsList` / `tagsSet` / `tagsRemove` plus the browser `tagsBySession` projection in `client/sessions/manager.ts` |
+| `packages/session/session-tags` domain | kept as the fork package, mounted by the web-app bundle as the `session-tags` row |
+| list-light `projection: 'none'` | not re-declared: the upstream list model serves the row projections, and no lightweight mode remains |
+| `sidebar.pipelines` slot and the `ui-lmo-pipeline` registration | retired; upstream's root-scoped `sidebar.panellist` list plus the layout `main` keyed slot is the insertion point |
+| pipeline-worker bundle and preset | the bundle is gone from both trees; the agent preset stays at `apps/cli/config/agent-presets/pipeline-worker` |
+| goal wrap-up suppression | `packages/goal/tool-goal/src/wrapup.ts`, driven by the `structuredOutputPresets` `Config` field |
+| HoverCard pinned, hindsight seat, inventory row slot | the pin is re-landed on the upstream `HoverCard` with required `pinLabel` / `unpinLabel` props; the fork's hindsight seat is retired with its region; `settings.plugin.inventory.item` stays a fork-owned slot |
+| token-meter `cacheHitRatio` and surface `current_turn` filtering | the `cacheHitRatio` view-layer additions in `packages/llm/token-meter`; `stripReasoning` applied to non-current-turn assistant messages in `packages/core/session` |
+| speckit skills and docs cleanup | unchanged; ten `.agents/skills/dsh-lmtech-speckit-*` skills |
 
-### Execution batches
+### Remaining work
 
-1. Upstream-first resolution of pure upstream-evolution conflicts; remove
-   apiproxy remnants.
-2. Keep-direct features land (rows 2/4/7/8/13).
-3. Controller port (rows 1/5/9) — read `agent.ts`/`list.ts`/`types.ts` style
-   first, then implement.
-4. Client side (rows 3/6/10/11/12) — upstream runtime model + post-split UI.
-5. Package graph (package.json deps, tsconfig.base paths, pnpm install), then
-   full-face typecheck plus affected vitest.
-
-### B17 backlog validity
-
-The disk-governance backlog (`T001-T020` in the outer LingMeowObservatory
-specs) survives the refactor: upstream's `projection-store.ts` is a client
-in-memory model (push, higher-seq-wins), not the host-side write-amplification
-fix US1 needs; `history-records.ts` is client wire alignment, not US3's host
-archive indexing. US2 (list-light) closes during this port (row 9). US1/US3
-stay open with their host-layer homes, re-pointed at the controller projection
-framework.
+1. **Plugins-side re-seat (spec 025).** `dsh-lmtech-plugins` registers its pipeline UI into upstream's root-scoped `sidebar.panellist` list plus the layout's `main` keyed slot, replacing the fork's deleted `sidebar.pipelines` mirror, and calls the tag verbs on `SessionController`. No harness-side slot is involved.
+2. **B17 US1 / US3 stay open.** The outer `008-session-disk-governance` backlog (Draft) still owns them: upstream's `projection-store.ts` is a client in-memory push model, not the host-side write-amplification fix US1 needs, and `history-records.ts` is client wire alignment, not US3's host archive indexing.
+3. **Alias hygiene.** `@lingmeow.tech/dsh-session-tags` resolves through hand-written `tsconfig.base.json` aliases (lines 54–55) that sit outside the generated block `pnpm run verify-tsconfig-paths` governs. Either the generator learns the fork package or the alias stays a recorded exception.
 
 ## Acceptance criteria
 
-`pnpm run typecheck:contracts-ready` zero errors, `tsc -b tsconfig.host.json`
-zero errors, affected vitest suites green, pre-push hooks pass.
+The remaining work is done when the plugins repository registers its pipeline panel through `sidebar.panellist` plus the `main` keyed slot with no harness-side slot (spec 025's own acceptance), and when the outer `008` spec closes US1/US3 with host-layer evidence. In this repository, `pnpm run verify-tsconfig-paths` either covers the fork aliases or the recorded exception names them.
 
 ## Risks
 
-- B13 lands **park-only**: `SubagentDecisionAnswerTable` installs the ask shadow
-  and exposes `pendingQuestions`, but the delivery half (`followup({ answers })`
-  / `subagent.answer`) has no producer yet, so the `answers` field on
-  `SubagentSendMessageOptions` is unconsumed. The `agent-busy` stall B13 closed
-  stays closed, but the decision channel is not usable end to end.
-- B17 US1/US3 stay open — the host-side write-amplification fix and the archive
-  indexing are unbuilt, and their outer spec (`008-session-disk-governance`) is
-  still Draft.
-- Eleven features are re-seated by hand; every row of the port map is a place
-  where the upstream and local shapes can silently diverge again on the next
-  rebase.
-- The renamed `@lingmeow.tech/dsh-session-tags` package reaches consumers
-  through hand-written `tsconfig.base.json` aliases rather than the generated
-  path block, so `verify-tsconfig-paths` does not cover it.
+- Every re-seated feature is a place where the upstream and fork shapes can diverge again on the next rebase; the upstream-sync note's capability table is the checklist that keeps the next sync honest.
+- B17 US1/US3 depend on an outer spec that is still Draft, so the disk-governance gap outlives this port.
+- The hand-written aliases remain outside the generated path block, so a renamed fork package would fail the typecheck rather than the paths gate.
 
 ## Alternatives considered
 
-- **Upstream-first with feature deferral (option B)** — rejected: the decision
-  channel and session-tags RPC are load-bearing for the lmtech pipeline; a
-  window without them re-opens the `agent-busy` stall B13 closed.
-- **Batch merge with per-batch ports (option C)** — rejected for now: the
-  split still forces the same controller work, and two merge states double the
-  conflict-surface bookkeeping.
+- **Upstream-first with feature deferral (option B)** — rejected: the tag data plane is load-bearing for the lmtech pipeline, and a window without it re-opens the `agent-busy` stall the continuable-activation model closes.
+- **Batch merge with per-batch ports (option C)** — rejected: the split still forces the same controller work, and two merge states double the conflict-surface bookkeeping.

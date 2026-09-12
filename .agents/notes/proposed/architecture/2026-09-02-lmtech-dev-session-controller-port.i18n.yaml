@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-09-02-lmtech-dev-session-controller-port.md
-2026-09-02-lmtech-dev-session-controller-port.md: 617c23ece88c96c4ff7dd7ecdc97796c7c94f6d0
-2026-09-02-lmtech-dev-session-controller-port.zh.md: 6cf813f5788bbb484cf2559a48b1b526514ab246
+2026-09-02-lmtech-dev-session-controller-port.md: 200b76d58ba278d9f915e08916694532ee890cb5
+2026-09-02-lmtech-dev-session-controller-port.zh.md: 996cb652e537096476ab9847329003e61059da55

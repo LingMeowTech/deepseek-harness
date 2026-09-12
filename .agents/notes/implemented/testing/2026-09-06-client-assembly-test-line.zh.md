@@ -26,7 +26,7 @@ API 客户端 spec 用一个可编程的 Remote 面假件驱动对象。这个�
 
 **Vitest 拥有每条测试的 mock 和客户端生命周期。** `createClientTest(plan, options)` 增加原生 `mock`、`remote` 与 `start` fixture。mock 每次新建并携带默认响应；`remote` 是它的命名空间 Proxy，显式 `start()` 留出配置启动期应答的时机，同一测试共用一个启动 Promise。收尾等待启动，即使断言失败也销毁成功创建的客户端、检查漏配，并拒绝后续启动。启动错误由调用方 await 观察。分别拥有多个客户端时仍用 `TestClient.start`。场景数据直接配置原生 mock；返回 mutation 应答与更新后续 describe 应答仍是两个独立操作。
 
-**`remoteDefaultResponses` 是启动期 Remote 端点的默认响应。** 这张表恰好列出 `web` roster 在没有 session、没有 workspace、默认设置下启动并渲染时会打的端点，每行注明调用方。spec 在其上叠加自己的 `RemoteTable`；新的启动期调用会在 `dispose()` 时让 spec 失败。
+**`remoteDefaultResponses` 是 roster 所读 Remote 端点的默认状态。** 这张表列出 `web` roster 在没有 session、没有 workspace、默认设置下启动并渲染时会打的端点，外加某表面在首个行出现后才触发的逐会话辅助读（例如会话列表逐行发起的 `session/tagsList` 拉取），每行注明调用方。spec 在其上叠加自己的 `RemoteTable`；roster 触及却没有默认的端点会在 `dispose()` 时让 spec 失败。
 
 `mock.remote` 使用直接调用方与 Connection 分发共用的原生 `@vitest/spy.fn` 函数。`MockedRemote` 对完整生成的命名空间映射应用 Vitest 深层 mock 类型转换；映射为空时仅这个 Proxy 弱化为 `any`。生产 `Context` 与 Remote 声明保持严格，不需要命名空间专属类型副本或编译器 Flag。[Proxy 类型指引](../../../../packages/test-support/remote-mock/README.zh.md#remote-proxy)要求即使无构建测试通过，本地也必须执行构建后的类型检查。
 

@@ -14,7 +14,7 @@ The repository adds the `pipeline` package group with the three capability roles
 
 The HTTP provider uses Node's global `fetch` directly. `ctx.web` fetch is GET-only anonymous public-resource retrieval with no custom headers, no POST/PATCH, and non-2xx responses as results, so it cannot carry signed pipeline requests. The provider owns the `METHOD\nPATH\nQUERY\nBODY_SHA256\nTIMESTAMP\nNONCE` canonical request and the `X-Secret-Id`/`X-Timestamp`/`X-Nonce`/`X-Signature` headers.
 
-Session tags are a storage-domain table, not session-log events: the log is append-only and a cold session cannot be mutated without preparing a live owner, while a domain table can be written for any session id. `@deepseek-ai/dsh-session-tags` owns the `session_tags` domain, the `ctx.sessionTags` registry, and the frozen pipeline tag names `pipeline_id` / `state_id` / `job_id` / `node_id`. The host API proxy projects `domain/changed` table writes into the existing host stream as `host/session-tags-changed` frames, so subscribed clients update without polling.
+Session tags are a storage-domain table, not session-log events: the log is append-only and a cold session cannot be mutated without preparing a live owner, while a domain table can be written for any session id. `@deepseek-ai/dsh-session-tags` owns the `session_tags` domain, the `ctx.sessionTags` registry, and the frozen pipeline tag names `pipeline_id` / `state_id` / `job_id` / `node_id`. A write becomes durable before the `domain/changed` notification, and no host-stream frame carries tag changes: a consumer reads the durable list back with `session.tags.list`, which the browser session list does after each list refresh.
 
 ## Alternatives considered
 
@@ -24,7 +24,7 @@ Session tags are a storage-domain table, not session-log events: the log is appe
 
 ## Consequences
 
-- The seam adds four packages and one host-stream frame variant. S2 and S4 consume the `pipeline.*` wire types and `host/session-tags-changed` without importing lmo-server transport details.
+- The seam adds four packages and one durable tag domain. S2 and S4 consume the `pipeline.*` wire types and read session tags through `session.tags.list` without importing lmo-server transport details.
 - Provider transport remains replaceable behind `ctx.lmoPipeline`; the model tool surface stays stable across provider swaps.
 - Tag writes are durable before notification, and removal of the last tag deletes the storage row; `session.tags.list` remains the reconnect baseline.
 - The generated Cordis catalog documents `ctx.lmoPipeline` on `docs/subsystems/pipeline.md` and `ctx.sessionTags` on the session subsystem page.

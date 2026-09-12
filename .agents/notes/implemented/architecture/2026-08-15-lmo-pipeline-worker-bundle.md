@@ -17,7 +17,7 @@ The DSH platform migration needs a DSH process that the Go runner can spawn as o
 
 The frozen model-visible persona (`src/prompts.ts`) pins the execution workflow, the decompose workflow, and the injected-environment contract. `cordis.patch.yml` and `worker.cordis.yml` inline the same literals; `tests/bundle.spec.ts` pins all three copies together so the model-visible text cannot drift across the deployment forms.
 
-`src/pipeline-worker-tags.ts` writes the runner-injected `PIPELINE_ID` / `STATE_ID` / `JOB_ID` / `NODE_ID` onto every session the worker mints through the `@deepseek-ai/dsh-session-tags` registry, so `session.tags.list` (and the host `session-tags-changed` stream) identifies pipeline sessions without a second session authority in the Go runner.
+`src/pipeline-worker-tags.ts` writes the runner-injected `PIPELINE_ID` / `STATE_ID` / `JOB_ID` / `NODE_ID` onto every session the worker mints through the `@deepseek-ai/dsh-session-tags` registry, so `session.tags.list` identifies pipeline sessions without a second session authority in the Go runner.
 
 The dsh-sdk subagent backend (`subagent-dsh-sdk` row) spawns each child with `scrubbedParentEnv()`, which drops `LMO_SERVER_*` (credential-shaped) and every `DSH_*` name. The child boots the same `worker.cordis.yml`, whose `lmo-pipeline` row requires the LMO credentials, so the config explicitly re-forwards `LMO_SERVER_HOST` / `LMO_SERVER_SECRET_ID` / `LMO_SERVER_SECRET_KEY` (plus the `DEEPSEEK_*` and `DSH_SESSION_ROOT` facts) in the row's `env`, merged after the scrub. The same three keys are forwarded in the profile-layer copy of the row.
 

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-15-lmo-pipeline-worker-bundle.md
-2026-08-15-lmo-pipeline-worker-bundle.md: 8637971ae3ecff35a63c6caec9ca0b809a42a09d
-2026-08-15-lmo-pipeline-worker-bundle.zh.md: cfe2811f0e9914166823d9051249a92a3cbdff86
+2026-08-15-lmo-pipeline-worker-bundle.md: a341f8cc51ea8cf66a6a14ebf8cab540b95d7df7
+2026-08-15-lmo-pipeline-worker-bundle.zh.md: 12c0013aacf24cc32979139eed5514bf495f44d7

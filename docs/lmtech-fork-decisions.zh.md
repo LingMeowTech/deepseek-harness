@@ -4,7 +4,7 @@
 
 本页是本 fork 相对 `upstream/master` 所保留的**每一处有意分歧**的单一索引，逐条附实测证据与归属裁决。由 spec `020-dsh-plugins-audit-cleanup`（US5）产出；本链门禁为 plugins 仓的 `scripts/check-harness-diff.mjs`。自 T094 终态起，该门禁断言：
 
-- 差异包集合（`git diff --name-only upstream/master...HEAD -- 'packages/**'`）落在 B 类白名单内 —— 16 包外加 [G1](#g1-generated-client-slot-catalog-b-class-derivative) 的生成插槽目录 —— 且每个 B 类包钉死允许文件集与新增行数上限；
+- 差异包集合落在 B 类白名单内，且每个 B 类包钉死允许文件集与新增行数上限。上述 024 之前的「16 包外加 [G1](#g1-generated-client-slot-catalog-b-class-derivative) 的生成插槽目录」已不再成立：024 退役了三个 fork 插槽中的两个、收敛了第 11 与第 15 行，并以 `c291e7961a` 为基准重测每一行，故 plugins 仓的白名单须按该实测重新钉定（R7）；
 - `015` 归属的 A 类 3 包已从差异中消失，两个已归零登记保持归零（[A1](#a1-spec-015-landing-the-fork-pipeline-copies-leave)、[Z1](#z1-already-zeroed-registrations)）；
 - 任何 B 类官方包都不依赖 lmtech 包；
 - Draft 归属的 A 类残留以警告（而非失败）报出（[R1](#r1-draft-owned-a-class-residuals-registered-not-executed)）。
@@ -18,51 +18,53 @@
 
 | 条目 | 类型 | 包或插槽 | 裁决 |
 | --- | --- | --- | --- |
-| [C1](#c1-thirty-row-classification-t094) | 分类表 | 30 个盘点包 | 唯一裁决表：A 6 + B 4 + 待评估 20（A 8 + B 12） |
-| [B1](#b1-packagesclientui-sidebar) | B 类，A+B 混合 | `packages/client/ui-sidebar` | 保留 `sidebar.pipelines` region；共享搜索行属 A 类，登记归 013 |
-| [B2](#b2-packagesclientui-conversation) | B 类 | `packages/client/ui-conversation` | 保留 `conversation.input.hindsight` |
-| [B3](#b3-packagesclientui-tool) | B 类，fixture 连带 | `packages/client/ui-tool` | 保留；残留行是会话标签 fixture 补字段，而非 priority 覆盖 |
+| [C1](#c1-thirty-row-classification-t094) | 分类表 | 30 个盘点包 | 唯一裁决表，2026-09-12 对 `c291e7961a` 重测：第 1-3 行与第 11-16 行由 024 收敛或重落，三个 fork 插槽退役两个，024 之前的 A/B 计数已被取代 |
+| [B1](#b1-packagesclientui-sidebar) | B 类，A+B 混合 | `packages/client/ui-sidebar` | **被 024 取代**：上游 `sidebar.panellist` 取代 fork 的区域；壳共享搜索行仍属 A 类（spec 013 US2），并登记一个无消费方的缺口 |
+| [B2](#b2-packagesclientui-conversation) | B 类 | `packages/client/ui-conversation` | **被 024 取代**：fork 的 `conversation.input.hindsight` 座位退役（T041） |
+| [B3](#b3-packagesclientui-tool) | B 类，fixture 连带 | `packages/client/ui-tool` | 保留；024 之后残留行只剩一处会话标签 fixture 补字段，而非 priority 覆盖 |
 | [B4](#b4-packagesclientui-settings-plugin-inventory) | B 类 | `packages/client/ui-settings-plugin-inventory` | 保留 `settings.plugin.inventory.item` |
-| [P1](#p1-packagesllmllm-pi-ai) | B 类 | `packages/llm/llm-pi-ai` | 保留通用 `reasoningTokens` wire 映射 |
+| [P1](#p1-packagesllmllm-pi-ai) | B 类 | `packages/llm/llm-pi-ai` | 保留通用 `reasoningTokens` wire 映射 —— 024 按合并结果原样保留（能力③） |
 | [P2](#p2-packagessdkserver) | B 类 | `packages/sdk/server` | 保留 `agentPreset` seam 与 Windows 退出排水修复 |
 | [P3](#p3-packagesclientui-settings-plugins) | B 类 | `packages/client/ui-settings-plugins` | 保留加宽的值组件导出 |
-| [P4](#p4-packagescompactioncompaction-basic) | B 类，无业务语义 | `packages/compaction/compaction-basic` | 保留新增测试 |
+| [P4](#p4-packagescompactioncompaction-basic) | B 类，无业务语义 | `packages/compaction/compaction-basic` | 保留新增测试 —— 024 后重测为 1 文件，+19 |
 | [P5](#p5-packagestest-supportclient-runtime) | B 类，编译连带 | `packages/test-support/client-runtime` | 保留 no-op 双打；随 016 一起删除 |
-| [P6](#p6-six-client-packages-with-fixture-coupling) | B 类，编译连带 | `packages/client/{ui-workflow-run,ui-trajectory,ui-theme,ui-subagent,ui-jobs,locale}` | 保留 fixture 字段；随 016 一起删除 |
+| [P6](#p6-six-client-packages-with-fixture-coupling) | B 类，编译连带 | `packages/client/{ui-workflow-run,ui-trajectory,ui-theme,ui-subagent,ui-jobs,locale}` | 保留 fixture 字段 —— 它现在连带的是 024 重落的 `tagsBySession` 投影；随 016 一起删除 |
 | [P7](#p7-packagesclientui-renderer) | B 类，无业务语义 | `packages/client/ui-renderer` | 保留 `types: ["node"]` 构建配置 |
-| [S1](#s1-sidebarpipelines) | 新增插槽 | `sidebar.pipelines` | 最小原生扩展，消费侧镜像在 plugins 仓 |
-| [S2](#s2-conversationinputhindsight) | 新增插槽 | `conversation.input.hindsight` | 最小原生扩展 |
-| [S3](#s3-settingsplugininventoryitem) | 新增插槽 | `settings.plugin.inventory.item` | 最小原生扩展，消费侧镜像在 plugins 仓 |
-| [M1](#m1-consumer-side-slot-contract-mirror-us5-c) | 机制 | 插件主包 | 消费侧自持同形状 `src/slots.ts` 镜像、经 `./slots` 消费；fork 仍是唯一渲染点 |
-| [G1](#g1-generated-client-slot-catalog-b-class-derivative) | B 类，生成产物 | `packages/extensions/cordis-client-runner` | 保留生成的插槽目录；它是三个新增插槽的投影 |
+| [S1](#three-new-slots-minimal-native-extension) | 新增插槽，已退役 | `sidebar.pipelines` | **被 024 取代**：fork 插槽已删除；上游 `sidebar.panellist` 列表加布局 `main` keyed 插槽即插入点 |
+| [S2](#three-new-slots-minimal-native-extension) | 新增插槽，已退役 | `conversation.input.hindsight` | **被 024 取代**：fork 座位已删除（T041） |
+| [S3](#b4-packagesclientui-settings-plugin-inventory) | 新增插槽 | `settings.plugin.inventory.item` | 最小原生扩展，024 未改动，消费侧镜像在 plugins 仓 |
+| [M1](#m1-consumer-side-slot-contract-mirror-us5-c) | 机制 | 插件主包 | 消费侧自持同形状 `src/slots.ts` 镜像、经 `./slots` 消费；024 之后镜像集合只剩一个 fork 插槽（`settings.plugin.inventory.item`） |
+| [G1](#g1-generated-client-slot-catalog-b-class-derivative) | B 类，生成产物 | `packages/extensions/cordis-client-runner` | 保留生成的插槽目录；它现在只投影 024 之后仍存在的插槽，键数在重跑目录时重测（T067） |
 | [A1](#a1-spec-015-landing-the-fork-pipeline-copies-leave) | A 类，已收敛 | `packages/pipeline/{lmo-pipeline,lmo-pipeline-http,tool-lmo-pipeline}` | 按 spec 015 迁出至 plugins 仓 |
-| [R1](#r1-draft-owned-a-class-residuals-registered-not-executed) | A 类，仅登记 | 11 包 | 归属 Draft spec；登记回 PM，020 不代执行 |
+| [R1](#r1-draft-owned-a-class-residuals-registered-not-executed) | A 类，仅登记 | 024 后 9 包 | 归属 Draft spec；024 已执行 `subagent` 与 `tool-goal` 两半，并随包删除 `lmo-pipeline-worker` 行 |
 | [Z1](#z1-already-zeroed-registrations) | 仅登记，已归零 | `packages/client/ui-workspace`, `packages/api/remotes` | 基线无差异；仅登记 |
 
 ## C1 三十行分类表（T094）
 
-盘点的范围是三十个包 —— `A 6 + B 4 + 待评估 20`（spec FR-022）。每行都带实测证据（`git -C <harness> diff --numstat upstream/master...HEAD -- <包>`）与归属裁决。第 1-3 行是本 spec 唯一收敛的行；第 4-6 行与第 11-18 行因归属 spec 仍为 Draft 而登记回 PM；第 7-10 行与第 19-30 行留在 fork。
+<a id="c1-thirty-row-classification-t094"></a>
+
+盘点的范围是三十个包（spec FR-022）。每行都带归属裁决；下表的「差异」列于 2026-09-12 在 024 worktree 重测，其中 `upstream/master` 即目标 `c291e7961a`（在合并提交 `af2a1e07ca` 上执行 `git diff --numstat c291e7961a HEAD -- <包>`，早于 S4 的进行中改动；标记为已收敛的行在其任务落地后归零）。024 收敛或重落了第 1-3 行与第 11-16 行；第 4-6 行与第 17-18 行仍登记给 Draft 归属方；第 7-10 行与第 19-30 行留在 fork。
 
 | # | 包 | 类 | 依据（实测） | 归属（状态） | 差异 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | `packages/pipeline/lmo-pipeline` | A | lmtech 管线业务（service + tool + invariant）进官方 pipeline 树 | 015（Approved）—— 已收敛 | 0 文件 |
 | 2 | `packages/pipeline/lmo-pipeline-http` | A | lmtech HTTP 传输面（client + 配置 schema） | 015（Approved）—— 已收敛 | 0 文件 |
 | 3 | `packages/pipeline/tool-lmo-pipeline` | A | lmtech 管线工具（`defineTool` 业务工具） | 015（Approved）—— 已收敛 | 0 文件 |
-| 4 | `packages/api/session-controller` | A | lmtech 会话控制面（Remote 贡献点 + 会话路由语义） | 011（Draft）—— 登记 | 8 文件，+225 |
-| 5 | `packages/session/session-tags` | A | `SessionTags*` remotes 与持久化标签存储 | 016（Draft）—— 登记 | 10 文件，+487 |
-| 6 | `packages/bundle/lmo-pipeline-worker` | A | 仅属 lmtech 的 bundle 被放进官方 bundle 树 | 018（Draft）/ 012 US3 —— 登记 | 16 文件，+1559 |
-| 7 | `packages/client/ui-sidebar` | B（A+B 混合） | `sidebar.pipelines` region = 声明 + 类型 + 渲染点；shell 级共享搜索行属 A 类 | 020 FR-024（B 面）/ 013 US2（A 面） | 8 文件，+303 |
-| 8 | `packages/client/ui-conversation` | B | `conversation.input.hindsight` —— 官方 composer 没有插件输入座位 | 020 FR-024 | 8 文件，+27 |
-| 9 | `packages/client/ui-tool` | B | 无源码行：这六行是一行的 `tagsBySession` fixture 补字段（会话标签编译连带）；spec 的「toolview priority 覆盖」读法无实测差异支撑（[B3](#b3-packagesclientui-tool)） | 020 FR-024（B 类）/ 016（fixtures） | 6 文件，+13 |
-| 10 | `packages/client/ui-settings-plugin-inventory` | B | `settings.plugin.inventory.item` —— fork 独有插槽 | 020 FR-024 | 4 文件，+128 |
-| 11 | `packages/subagent/subagent` | 待评估 → A | `decision-answer.ts`（新增 236 行）内联进官方 subagent，外加 `list-children` 排序反转 | 007（Draft）+ 013 US4 —— 登记 | 5 文件，+290 |
-| 12 | `packages/client/ui-primitives` | 待评估 → A | 无条件注入的 HoverCard pin，外加硬编码中文 `aria-label` | 013 US1 —— 登记 | 3 文件，+118 |
-| 13 | `packages/llm/token-meter` | 待评估 → A | 在官方 projection view 内新增派生字段 `cacheHitRatio` | 013 US3 —— 登记 | 3 文件，+31 |
-| 14 | `packages/core/session` | 待评估 → A | `stripReasoning`，外加 `deriveMessages` 中硬编码的 Codex `current_turn` 过滤 | 013 US4 —— 登记 | 3 文件，+57 |
-| 15 | `packages/goal/tool-goal` | 待评估 → A | `STRUCTURED_OUTPUT_PRESETS = ['pipeline-worker']` —— lmtech preset 名进官方包 | 013 US5 —— 登记 | 3 文件，+85 |
-| 16 | `packages/bundle/web-app` | 待评估 → A | 三条 `@lingmeow.tech/*` patch row 与配套依赖 | 018（Draft）—— 登记 | 2 文件，+21 |
-| 17 | `packages/boot/app-boot` | 待评估 → A | `lmo-pipeline-worker` profile 模板 | 012 US3 / 018 FR-008 —— 登记 | 1 文件，+5 |
-| 18 | `packages/extensions/tool-cordis` | 待评估 → A | `src/api-catalog.ts` —— lmtech 条目写进官方目录（条目级归属，见 [R1](#r1-draft-owned-a-class-residuals-registered-not-executed)） | 015 / 016 / 007 —— 登记 | 1 文件，+84 |
+| 4 | `packages/api/session-controller` | A | lmtech 会话控制面（三个 `@Remote` 标签动词 + 客户端 `tagsBySession` 投影） | 011（Draft）—— 登记 | 8 文件，+225/-8 |
+| 5 | `packages/session/session-tags` | A | 持久标签注册表及其整个包 | 016（Draft）—— 登记 | 10 文件，+487 |
+| 6 | `packages/bundle/lmo-pipeline-worker` | A | 仅属 lmtech 的 bundle 被放进官方 bundle 树 | 018（Draft）/ 012 US3 —— **两棵树中均已不存在** | 0 文件 |
+| 7 | `packages/client/ui-sidebar` | B（A+B 混合） | `sidebar.pipelines` 区域**被 024 删除**（上游 `sidebar.panellist` 列表加布局 `main` keyed 插槽即插入点）；剩下的是 shell 级共享搜索行，属 A 类，其 `searchQuery` 下发在本仓已无消费方（已登记缺口） | 020 FR-024 / 013 US2 —— 区域由 024 退役（T019/T020/T041/T042） | 7 文件，+296/-6 |
+| 8 | `packages/client/ui-conversation` | B | fork 的 `conversation.input.hindsight` 座位**被 024 退役**（T041）；剩余行是测试 fixture 对齐 | 020 FR-024 —— 座位由 024 退役 | 8 文件，+27/-2 |
+| 9 | `packages/client/ui-tool` | B | 无源码行：残留行只有一处 `tagsBySession` fixture 补字段（会话标签编译连带）；spec 的「toolview priority 覆盖」读法无实测差异支撑（[B3](#b3-packagesclientui-tool)） | 020 FR-024（B 类）/ 016（fixtures） | 1 文件，+1 |
+| 10 | `packages/client/ui-settings-plugin-inventory` | B | `settings.plugin.inventory.item` —— fork 独有插槽 | 020 FR-024 | 5 文件，+129/-5 |
+| 11 | `packages/subagent/subagent` | A —— **已由 024 收敛** | `decision-answer.ts`、`pendingQuestions` 与 `list-children` 排序反转均已移除（T032/T033/T036）；理由收编于 [decision-answer 退役 Agent Note](../.agents/notes/implemented/simplification/2026-09-12-subagent-decision-answer-retirement.zh.md) | 007（Draft）+ 013 US4 —— 由 024 收敛 | 合并提交处 4 文件，+267/-15，其后 0 文件 |
+| 12 | `packages/client/ui-primitives` | 待评估 —— **keep as B** | 在上游组件上重落 pin，新增 required props `pinLabel` / `unpinLabel` 并经 `t(...)` 接线，取代硬编码中文 label（T055/T056） | 013 US1 —— 由 024 重落 | 3 文件，+118/-10 |
+| 13 | `packages/llm/token-meter` | 待评估 —— **keep as B** | 只重落 `cacheHitRatio` 的 view 层三处；压缩语义以上游为准（T051） | 013 US3 —— 由 024 重落 | 3 文件，+31/-1 |
+| 14 | `packages/core/session` | 待评估 —— **keep as B** | `stripReasoning` 重落为非当前轮派生，增量缓存保持不动，事件与格式版本不变（T052） | 013 US4 —— 由 024 重落 | 3 文件，+57/-4 |
+| 15 | `packages/goal/tool-goal` | A —— **已由 024 收敛** | `STRUCTURED_OUTPUT_PRESETS` 已移除；preset 清单改为 `structuredOutputPresets` 这个 `Config` 字段，收尾抑制保留（T048） | 013 US5 —— 由 024 收敛 | 3 文件，+85/-4 |
+| 16 | `packages/bundle/web-app` | 待评估 —— 由 024 更新 | 一条 `@lingmeow.tech/dsh-session-tags` patch row 加配套 workspace 依赖，已删的 pipeline seam row 以注释登记并有测试断言其缺席（T015） | 018（Draft）—— 登记 | 3 文件，+59 |
+| 17 | `packages/boot/app-boot` | 待评估 —— **已由 024 收敛** | `lmo-pipeline-worker` profile 模板在两棵树中均不存在；fork 唯一残留行是断言该 profile 与其 bundle 保持缺席的测试 | 012 US3 / 018 FR-008 —— 已收敛 | 1 文件，+43 |
+| 18 | `packages/extensions/tool-cordis` | 待评估 | `src/api-catalog.ts` —— lmtech 条目写进官方目录（条目级归属，见 [R1](#r1-draft-owned-a-class-residuals-registered-not-executed)）；024 把 016 条目留给目录重跑清除 | 016 / 007 —— 登记 | 1 文件，+84/-3 |
 | 19 | `packages/llm/llm-pi-ai` | 待评估 → B | 通用 `reasoningTokens` wire 映射（[P1](#p1-packagesllmllm-pi-ai)） | 020 保留 | 3 文件，+52 |
 | 20 | `packages/sdk/server` | 待评估 → B | `agentPreset` seam 与 Windows 退出排水（[P2](#p2-packagessdkserver)） | 020 保留 | 1 文件，+17 |
 | 21 | `packages/client/ui-settings-plugins` | 待评估 → B | 加宽的 `SecretField` / `ValueField` 导出（[P3](#p3-packagesclientui-settings-plugins)） | 020 保留 | 1 文件，+2 |
@@ -79,50 +81,49 @@
 另有两处登记补全全貌，但不占分类行：
 
 - 两个已归零的盘点条目（`packages/client/ui-workspace`、`packages/api/remotes`）完全没有差异 —— [Z1](#z1-already-zeroed-registrations)；
-- 有一个包在三十个盘点包之外却带差异，按「三个新增插槽的生成派生」登记 —— [G1](#g1-generated-client-slot-catalog-b-class-derivative)。
+- 有一个包在三十个盘点包之外却带差异，按「fork 插槽声明的生成派生」登记 —— [G1](#g1-generated-client-slot-catalog-b-class-derivative)。
 
 ## B 类包：保留 + 决策记录
 
-以下每行均以 `git -C <harness> diff --stat upstream/master...HEAD -- <包>` 实测；记录的行集与该输出逐条对应。
+以下每行记录 spec 020 当时作出的裁决；B1 与 B2 的行集此后已被 024 的「上游优先」收口取代（删除了两个 fork 插槽），各行引用的实测证据为 2026-09-12 对 `c291e7961a` 的测量。
 
 ### B1 `packages/client/ui-sidebar`
 
+`sidebar.pipelines` 区域已被 024 取代：fork 不再声明该插槽，`ui-sidebar` 渲染上游 root 作用域的 `sidebar.panellist` 列表，对应布局的 root 作用域 `main` keyed 插槽（经 `ctx.layout.selectPanel` 切换）。下表是 fork 在合并提交 `af2a1e07ca` 上、T019/T020/T041 落地之前仍携带的行：
+
 | 行 | 语义 | 类 |
 | --- | --- | --- |
-| `src/client/index.ts` | `sidebar.pipelines` 声明（`kind: 'single'`、`scope: 'root'`） | B |
-| `src/client/contract/slots.ts` | `sidebar.pipelines` 类型，owner 为 `SidebarSectionOwnerProps` | B |
-| `src/client/SidebarRoot.tsx` | 唯一渲染点 | B |
 | `src/client/SidebarRoot.module.css`、`src/client/locales.ts` | shell 级共享搜索行的样式与文案 | A |
-| `tests/*`（3 文件） | 两个面的覆盖 | 混合 |
+| `src/client/SidebarRoot.tsx` | 共享搜索行加面板列表渲染 | 混合 |
+| `tests/*`（3 文件） | 该行的覆盖与已录制快照 | 混合 |
 
-裁决：region 面保留 —— 官方 sidebar 没有插件自有的 section region，新增内容恰好是声明 + 类型 + 渲染点。共享搜索行属 A 类（spec 013 US2 裁定 shell 只留 region、不留共享搜索行）；spec 020 只登记，不触碰。
+裁决：区域面已消失。上游的面板列表加 root 作用域 `main` keyed 插槽即插入点，故 fork 不再保留自有插槽。shell 级共享搜索行仍属 A 类（spec 013 US2，020 只登记不执行），T042 也把 e2e 车道重新指向它 —— 但区域移除之后，本仓已没有消费方读取 `SidebarRoot` 经 section owner share 下发的 `searchQuery`，且 `SidebarSectionOwnerProps` 自身只声明 `wide` 与 `expandSidebar`。这是一处**已登记缺口**：暴露于 024 S4，其收敛归属 T019/T020/T042 后续，而非本 spec 内的代码修复。
 
 ### B2 `packages/client/ui-conversation`
 
+被 024 取代：fork 的 `conversation.input.hindsight` 座位已删除（T041），故 `src/client/apply.ts`、`src/client/contract/slots.ts` 与 `src/client/skeleton/InputBar.tsx` 都不再声明或渲染它。
+
 | 行 | 语义 |
 | --- | --- |
-| `src/client/apply.ts` | `conversation.input.hindsight` 注册 |
-| `src/client/contract/slots.ts` | 插槽类型，owner 沿用官方已导出的 `InputControlOwnerProps` |
-| `src/client/skeleton/InputBar.tsx` | 唯一渲染点 |
-| `tests/*`（5 文件） | 覆盖 |
+| `tests/*`（5 文件） | 与上游套件对齐的 bench 字段与 fixture |
 
-裁决：保留。官方 composer 没有插件自有输入控件的插入点；新增内容不含 lmtech 业务逻辑，owner props 复用官方 `InputControlOwnerProps`。
+裁决：该座位是退役而非保留。上游 composer 本就声明了它支持的插件输入座位（`conversation.input.plan`、`conversation.input.model` 及其周边的 list 座位），fork 独有的同级座位在本仓没有消费方，而原本要渲染进去的管线 UI 位于 plugins 仓，经上游自有座位注册。
 
 ### B3 `packages/client/ui-tool`
 
-2026-09-10 实测行：`tests/coverage-tails.client.spec.tsx`、`tests/diff-card.client.spec.tsx`、`tests/read-card.client.spec.tsx`、`tests/search-card.client.spec.tsx`、`tests/terminal-card.client.spec.tsx`、`tests/web-card.client.spec.tsx` —— 六处一行的 `tagsBySession` fixture 补字段，**且没有任何源码行**：本 fork 已不含 toolview priority 覆盖，故 spec 的「toolview priority 覆盖」读法在实测差异中没有对应物。
+2026-09-12（024 之后）实测：`tests/coverage-tails.client.spec.tsx` —— 一处 `tagsBySession` fixture 补字段，**且没有任何源码行**。同步之前记录的五个 card spec 行是上游删除、由本次合并采纳（T022），故 fork 在工具包上的残留差异就是这一行 fixture，spec 的「toolview priority 覆盖」读法在实测差异中仍无对应物。
 
 裁决：按 B 类保留。台账与门禁白名单记录的是类别，而残留行是无产品行为的编译连带，随 spec 016 一并删除。若确有 priority 覆盖，须先补证再据此改写本行。
 
 ### B4 `packages/client/ui-settings-plugin-inventory`
 
-裁决：保留。`settings.plugin.inventory.item` 在 `src/client/slot-contract.ts` 声明（owner `PluginInventoryItemOwnerProps` = `{ children?: never }`），经 `src/client/index.ts` 的 `children` 注册，由 `PluginInventorySettingsTab.tsx` 渲染，其行列表由 `src/client/inventory-items.ts` 支撑（+67）。这是三个 fork 独有插槽里 plugins 仓**原缺本地声明**的唯一一个；消费侧镜像负责补齐（见 [S3](#s3-settingsplugininventoryitem)）。
+裁决：保留，024 未改动。`settings.plugin.inventory.item` 在 `src/client/slot-contract.ts` 声明（owner `PluginInventoryItemOwnerProps` = `{ children?: never }`），经 `src/client/index.ts` 的 `children` 注册，由 `PluginInventorySettingsTab.tsx` 渲染，其行列表由 `src/client/inventory-items.ts` 支撑。T017 对该设置页取上游渲染（`StateDotState` / `TagTone` 引用现来自 ui-primitives），而这是三个 fork 独有插槽里 plugins 仓**原缺本地声明**的唯一一个；消费侧镜像负责补齐（见 [S3](#b4-packagesclientui-settings-plugin-inventory)）。
 
 ### P1 `packages/llm/llm-pi-ai`
 
 行：`src/stream.ts`、`tests/adapter.spec.ts`、`tests/reasoning-usage.spec.ts`。
 
-裁决：保留。`mapUsage` 透出官方映射丢弃的 `reasoningTokens` wire 字段。这是通用 provider 映射（无 lmtech 词汇），可原样上游化；测试已钉住。
+裁决：保留，024 按合并结果原样重落（能力③）。`mapUsage` 透出官方映射丢弃的 `reasoningTokens` wire 字段。这是通用 provider 映射（无 lmtech 词汇），可原样上游化；测试已钉住，本次合并无需改动它。024 后实测 3 文件，+52/-1。
 
 ### P2 `packages/sdk/server`
 
@@ -140,7 +141,7 @@
 
 行：`tests/compaction-basic.spec.ts`。
 
-裁决：保留。纯测试新增，无产品行为；按「无业务语义」记为 B 类。
+裁决：保留；2026-09-12 重测为 1 文件，+19。纯测试新增，无产品行为；按「无业务语义」记为 B 类，024 未触碰。
 
 ### P5 `packages/test-support/client-runtime`
 
@@ -150,9 +151,11 @@
 
 ### P6 六个 fixture 连带的客户包
 
+<a id="p6-six-client-packages-with-fixture-coupling"></a>
+
 包与行：`packages/client/ui-workflow-run/tests/workflow-run.client.spec.tsx`、`packages/client/ui-trajectory/tests/views.client.spec.tsx`、`packages/client/ui-theme/tests/appearance-row.client.spec.tsx`、`packages/client/ui-subagent/tests/conversation-ui.client.spec.tsx`、`packages/client/ui-jobs/tests/job-list-action.client.spec.tsx`、`packages/client/locale/tests/language-row.client.spec.tsx`。
 
-裁决：暂保留；各为一行测试 fixture 补字段（`tagsBySession`），由会话标签面连带。inventory 的 `ui-locale` 实为本 `packages/client/locale`。随 spec 016 一并删除。
+裁决：暂保留；各为一行测试 fixture 补字段（`tagsBySession`），由会话标签面连带 —— 该面已被 024 重落为会话列表快照上的 `tagsBySession` 投影。随 spec 016 一并删除。inventory 的 `ui-locale` 实为本 `packages/client/locale`。
 
 ### P7 `packages/client/ui-renderer`
 
@@ -162,15 +165,17 @@
 
 ## 三个新增插槽：最小原生扩展
 
+<a id="three-new-slots-minimal-native-extension"></a>
+
+024 退役了其中两个：`sidebar.pipelines`（上游 `sidebar.panellist` 加布局 `main` keyed 插槽即插入点）与 `conversation.input.hindsight`（上游 composer 座位已覆盖该需求）。剩下一个 fork 独有插槽，仍只含三处锚点、无业务代码：
+
 | 插槽 | 声明 | 类型 | 渲染点 | owner props |
 | --- | --- | --- | --- | --- |
-| `sidebar.pipelines` | `ui-sidebar/src/client/index.ts` | `ui-sidebar/src/client/contract/slots.ts` | `ui-sidebar/src/client/SidebarRoot.tsx` | `SidebarSectionOwnerProps`（`{ wide; expandSidebar }`，官方已导出） |
-| `conversation.input.hindsight` | `ui-conversation/src/client/apply.ts` | `ui-conversation/src/client/contract/slots.ts` | `ui-conversation/src/client/skeleton/InputBar.tsx` | `InputControlOwnerProps`（官方已导出） |
 | `settings.plugin.inventory.item` | `ui-settings-plugin-inventory/src/client/index.ts`（`children`） | `ui-settings-plugin-inventory/src/client/slot-contract.ts` | `ui-settings-plugin-inventory/src/client/PluginInventorySettingsTab.tsx` | `PluginInventoryItemOwnerProps` = `{ children?: never }`（fork 独有） |
 
-每个插槽恰好只含这三处锚点，无业务代码。三个插槽的唯一渲染点仍在 fork。
-
 ## M1 消费侧插槽契约镜像（US5-C）
+
+<a id="m1-consumer-side-slot-contract-mirror-us5-c"></a>
 
 `@deepseek-ai/dsh-client-ui-*` 的 npm 版领先本 fork，永远不会解析到 fork 声明；fork 也无 `@deepseek-ai` scope 发布权。因此由消费侧自持同形状镜像：
 
@@ -178,13 +183,19 @@
 2. 该包经 `./slots` 子入口暴露，`-ui` 包消费该入口（`import type {} from '<主包>/slots'`）—— 无需 fork 发版即可类型可解析；
 3. fork 保留唯一渲染点；两侧都不得自造同名新类型、不得使用本地 peer link、不得经 `paths` 跨仓解析（constitution 禁止项③）。
 
-plugins 仓的形状门禁 `scripts/check-slot-contract-mirror.mjs --fork-root <harness>` 逐条比对镜像与 fork 声明。
+024 之后镜像集合只剩一个插槽 `settings.plugin.inventory.item`：fork 为管线区与 Hindsight 座位声明的两个插槽已不存在，其消费侧镜像随之离开。
+
+形状门禁 `scripts/check-slot-contract-mirror.mjs --fork-root <harness>` 位于 plugins 仓（见[复核](#verification)）；它逐条比对镜像与 fork 声明。
 
 ## G1 生成的客户端插槽目录（B 类派生）
 
-`packages/extensions/cordis-client-runner/src/client/slot-catalog.ts` 不在三十个盘点包之列，却带差异：该目录由 `scripts/gen-client-catalog.ts` 从 fork 的客户端插槽声明生成，而三个新增插槽（[S1](#s1-sidebarpipelines)、[S2](#s2-conversationinputhindsight)、[S3](#s3-settingsplugininventoryitem)）恰好新增三条目（key 52 → 55，+97/-4 行；实测于 015 收敛后官方生成器重跑之后）。`pnpm run verify-client-catalog` 对任何漂移 fail closed，故这些插槽存续期间该文件无法回退；门禁因此把它列为派生产物，而不去加宽十六包 B 类集合。
+<a id="g1-generated-client-slot-catalog-b-class-derivative"></a>
+
+`packages/extensions/cordis-client-runner/src/client/slot-catalog.ts` 不在三十个盘点包之列，却带差异：该目录由 `scripts/gen-client-catalog.ts` 从 fork 的客户端插槽声明生成，而 024 之后它只能投影仍然存在的插槽 —— fork 的 `settings.plugin.inventory.item`，加上上游自有的条目（含 `sidebar.panellist`）。024 之前的「key 52 → 55」读数已被取代，不得沿用：请用 `pnpm run gen-client-catalog` 重测，并让 `pnpm run verify-client-catalog` 钉住结果（T067）。该门禁对任何漂移 fail closed，故只要还有 fork 插槽存续，该文件就无法回退；台账因此把它列为派生产物，而不去加宽 B 类集合。
 
 ## A1 spec 015 落点：fork 的 pipeline 副本离开本仓
+
+<a id="a1-spec-015-landing-the-fork-pipeline-copies-leave"></a>
 
 `packages/pipeline/lmo-pipeline`、`packages/pipeline/lmo-pipeline-http` 与 `packages/pipeline/tool-lmo-pipeline` 是 fork 新增包（上游**完全没有** `packages/pipeline/`），把 lmtech 管线业务语义带进官方树。spec 015（Approved）已把它们重新安置为 `@lingmeow.tech/dsh-lmtech-pipeline`、`@lingmeow.tech/dsh-lmtech-pipeline-http` 与 `@lingmeow.tech/dsh-lmtech-tool-pipeline`，故 spec 020 删除 fork 副本及其全部引用：
 
@@ -193,39 +204,46 @@ plugins 仓的形状门禁 `scripts/check-slot-contract-mirror.mjs --fork-root <
 | 三个包目录（22 文件） | 删除 |
 | `tsconfig.base.json` 别名、`tsconfig.host.json` references | 移除 |
 | `packages/bundle/web-app/{package.json,cordis.patch.yml}` | 摘除 `dsh-lmo-pipeline-http` / `dsh-tool-lmo-pipeline` 依赖与 row（该两 row 指向的包已不存在） |
-| `packages/bundle/lmo-pipeline-worker/{package.json,cordis.patch.yml,worker.cordis.yml}` | 摘除同样两条依赖与 row；worker bundle 其余内容仍归 spec 018 |
+| `packages/bundle/lmo-pipeline-worker/{package.json,cordis.patch.yml,worker.cordis.yml}` | 摘除同样两条依赖与 row；worker bundle 本身此后已从两棵树中离开 |
 | `scripts/gen-cordis-catalog.ts` | 摘除已不再被发现的 `lmoPipeline` 页条目与 `Lmo*` 链接条目（该生成器双向 fail-closed） |
 | `scripts/verify-package-readme-model-experience.ts` | 摘除两条指向已删路径的 allowlist 条目 |
 | `packages/extensions/tool-cordis/src/api-catalog.ts`、`docs/subsystems/pipeline.{md,zh.md}`、`docs/tool-catalog.md` | 用官方生成器重新生成 |
 | `pnpm-lock.yaml` | 移除已删工程的 importer 与 link 条目 |
 
-worker bundle 其余 row（`session-tags`、`pipeline-worker-tags`）与 `lmo-pipeline-worker` profile 保持原样：它们归属 Draft 的 018/012，此处只登记。
+本节所述的 worker bundle 在两棵树中都已不存在：`packages/bundle/lmo-pipeline-worker` 既不在目标树也不在 fork 中，故它的 row 与 `lmo-pipeline-worker` profile 模板是「已消失」而非「仅登记」。harness 仍在挂载的是 web-app bundle 的 `session-tags` row。pipeline seam 三包仍然不在此仓，且[上游同步](../.agents/notes/implemented/architecture/2026-09-12-024-upstream-sync.zh.md)以「上游优先」退役了 fork 自有的侧栏区域与客户端 pipelines service，改由上游面板列表承担，故 `packages/pipeline/**` 继续留在 fork 差异之外。
 
 收敛之外还有一处连带需要修复：`packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts` 仍断言两个已被删除的 row（patch 列表与 worker 配置各一处），故收敛后该包的测试链（`vitest run packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts`）以两条 "must mount" 断言失败。现已在期望值内联标注删除与归属 spec，该链恢复绿。删除留下的**功能性问题归 spec 018**：worker profile 已不再挂载任何 `ctx.lmoPipeline` seam —— 收敛前的包名在何处都解析不到；由 018 决定按重安置后的插件名补回该 row。
 
 ## R1 Draft 归属的 A 类残留：只登记，不执行
 
-spec 020 只执行归属 spec 为 Approved（`015`）的 A 类面。其余 A 类包归属 Draft spec，一律登记回 PM 而不在此改动 —— 在其归属 spec 落地前，fork 保留其差异。2026-09-10 实测状态（`grep -l 'Status\*\*: Approved' docs/specs/*/spec.md` → 003 / 015 / 020 / 021 / 022）：
+<a id="r1-draft-owned-a-class-residuals-registered-not-executed"></a>
+
+spec 020 只执行归属 spec 为 Approved（`015`）的 A 类面；024 随后执行其自身 spec 拥有的部分。其余 A 类包归属 Draft spec，一律登记回 PM —— 在其归属 spec 落地前，fork 保留其差异。2026-09-12 在 024 worktree 对 `c291e7961a` 的实测状态：
 
 | 包 | 文件数 | 归属 spec（状态） | 登记动作 |
 | --- | --- | --- | --- |
-| `packages/api/session-controller` | 8 | 011（Draft） | 移除对 `dsh-session-tags` 的反向依赖 / RPC 收口 |
-| `packages/session/session-tags` | 10 | 016（Draft） | 会话标签业务面迁入 plugins 仓；为 T094 配对门禁补的双语 README 随该包一并删除 |
-| `packages/bundle/lmo-pipeline-worker` | 16 | 018（Draft）/ 012 US3 | worker 定义侧移出 dsh、归 lmo runner 侧；并按重安置后的插件名补回 `ctx.lmoPipeline` seam row（收敛前的包名解析不到，故收敛时删除 —— 见 [A1](#a1-spec-015-landing-the-fork-pipeline-copies-leave)） |
-| `packages/subagent/subagent` | 5 | 007（Draft）+ 013 US4 | `decision-answer` 迁出；`list-children` 排序还原 |
-| `packages/client/ui-primitives` | 3 | 013 US1 | 还原无条件 pin 与硬编码中文 label |
-| `packages/llm/token-meter` | 3 | 013 US3 | 还原派生的 `cacheHitRatio` projection |
-| `packages/core/session` | 3 | 013 US4 | 还原硬编码的 Codex `current_turn` 过滤 |
-| `packages/goal/tool-goal` | 3 | 013 US5 | `pipeline-worker` preset 映射上移插件侧 |
-| `packages/boot/app-boot` | 1 | 012 US3 / 018 FR-008 | 删除 `lmo-pipeline-worker` profile 模板 |
-| `packages/bundle/web-app` | 2 | 018（Draft） | 余下 row 的 `name` codemod 到独立包 + 依赖段收敛 |
-| `packages/extensions/tool-cordis` | 1 | 015 / 016 / 007 | 条目级归属，2026-09-10 实测 `+84/-3`（`src/api-catalog.ts`）：`lmoPipeline` 的 `SERVICE_API` 条目与其 `Lmo*` 类型条目**已经消失** —— 015 收敛时重跑的官方生成器摘掉了这些悬空引用（收敛前读数为 `+223/-3`）—— 故只剩 016 的条目（`@Remote('tagsList'/'tagsSet'/'tagsRemove')` 与 `sessionTags` 服务）与 007 的条目（`SubagentRuntime.pendingQuestions`、`DecisionAnswer*` 类型）保持登记 |
+| `packages/api/session-controller` | 8 | 011（Draft） | 移除对 `dsh-session-tags` 的反向依赖 / RPC 收口；024 保留三个 `@Remote` 标签动词与客户端 `tagsBySession` 投影 |
+| `packages/session/session-tags` | 10 | 016（Draft） | 会话标签业务面迁入 plugins 仓；双语 README 随该包一并删除 |
+| `packages/subagent/subagent` | 0 | 007（Draft）+ 013 US4 | **已由 024 收敛**：`decision-answer`、`pendingQuestions` 与 `list-children` 排序反转均已移除；理由收编于[退役 Agent Note](../.agents/notes/implemented/simplification/2026-09-12-subagent-decision-answer-retirement.zh.md) |
+| `packages/client/ui-primitives` | 3 | 013 US1 | 由 024 重落为 keep-as-B 面：pin 回到上游组件上、新增 required props `pinLabel` / `unpinLabel`，不再有硬编码中文 label（T055/T056） |
+| `packages/llm/token-meter` | 3 | 013 US3 | 由 024 重落为 keep-as-B 面：只保留 `cacheHitRatio` view 层三处（T051） |
+| `packages/core/session` | 3 | 013 US4 | 由 024 重落为 keep-as-B 面：非当前轮 `stripReasoning`，增量缓存保持不动（T052） |
+| `packages/goal/tool-goal` | 3 | 013 US5 | **已由 024 收敛**：preset 清单改为 `Config` 字段，不再硬编码 lmtech preset 名（T048） |
+| `packages/boot/app-boot` | 1 | 012 US3 / 018 FR-008 | **已由 024 收敛**：`lmo-pipeline-worker` profile 模板在两棵树中均不存在；残留行是断言该缺席的测试 |
+| `packages/bundle/web-app` | 3 | 018（Draft） | 024 保留 `session-tags` row 与其依赖；其余 row 收敛归 018 |
+| `packages/extensions/tool-cordis` | 1 | 016 / 007 | 条目级归属，2026-09-12 实测 `+84/-3`（`src/api-catalog.ts`）：`lmoPipeline` 的 `SERVICE_API` 条目与其 `Lmo*` 类型条目已经消失，007 的条目（`SubagentRuntime.pendingQuestions`、`DecisionAnswer*` 类型）在退役后重跑目录时消失，只剩 016 的条目（`@Remote('tagsList'/'tagsSet'/'tagsRemove')` 与 `sessionTags` 服务）保持登记 |
 
 ## Z1 已归零登记
+
+<a id="z1-already-zeroed-registrations"></a>
 
 `packages/client/ui-workspace` 与 `packages/api/remotes` 出现在 inventory 的 B 类清单中，但基线差异对两者均为零文件。仅登记；两者都不进入门禁包集合。
 
 ## 复核命令
+
+<a id="verification"></a>
+
+本页点名的两个 plugins 仓脚本（`check-harness-diff.mjs`、`check-slot-contract-mirror.mjs`）在两棵 harness 树中都不存在 —— 它们属于 plugins 仓（R7），故下列命令须在持有它们的 worktree 中执行，而它们携带的 B 类白名单须按 C1 的 2026-09-12 实测重新钉定。
 
 ```bash
 # from dsh-lmtech-plugins/worktree/020-impl — expected exit 0 (warnings only for the Draft-owned rows of R1)
