@@ -210,6 +210,8 @@ Source: [`packages/interaction/user-approval/src/index.ts:33`](../packages/inter
 'assistant/attempt': { turn: number; step: number; stream: AssistantStreamRecord[] }
 ```
 
+Types: [AssistantStreamRecord](subsystems/llm-streaming.md)
+
 Source: [`packages/core/session/src/types.ts:335`](../packages/core/session/src/types.ts)
 
 <a id="assistantmessage--surface"></a>
@@ -238,7 +240,7 @@ Source: [`packages/core/session/src/types.ts:335`](../packages/core/session/src/
 }
 ```
 
-Types: [TokenUsage](subsystems/llm-streaming.md)
+Types: [AssistantStreamRecord](subsystems/llm-streaming.md) · [TokenUsage](subsystems/llm-streaming.md)
 
 Source: [`packages/core/session/src/types.ts:321`](../packages/core/session/src/types.ts)
 

@@ -205,7 +205,7 @@ export interface Config {
 
 ## `@deepseek-ai/dsh-api-session-controller`
 
-需要：`agentDefaultModel` · `agents` · `attachments` · `fileUploads` · `llm` · `sessions` · `sessionProjections` · `sessionQuery` · `typert` · `workspaceRegistry`
+需要：`agentDefaultModel` · `agents` · `attachments` · `fileUploads` · `llm` · `sessions` · `sessionProjections` · `sessionTags` · `sessionQuery` · `typert` · `workspaceRegistry`
 
 ```ts config-catalog
 /** Session Controller deployment policy. */
@@ -215,7 +215,7 @@ export interface Config {
 }
 ```
 
-来源：[`packages/api/session-controller/src/index.ts:69`](../packages/api/session-controller/src/index.ts)
+来源：[`packages/api/session-controller/src/index.ts:78`](../packages/api/session-controller/src/index.ts)
 
 <a id="deepseek-aidsh-api-settings-controller"></a>
 
@@ -1873,18 +1873,20 @@ export interface Config {
 export interface JsonRpcConfig {
   /** Report max-token turn/subagent termination as a successful SDK result. */
   maxTokensAsSuccess?: boolean
+  /** Agent preset id SDK-created sessions are composed from, like normal web sessions. */
+  agentPreset?: string
   /** Transport input override; production uses `process.stdin`. */
   input?: Readable
   /** Transport output override; production uses `process.stdout`. */
   output?: Writable
-  /** Process-exit override; production uses `process.exit`. */
+  /** Process-exit request override; production records the code and lets Node drain. */
   exit?: (code: number) => void
 }
 ```
 
 依赖：`Readable`（`node:stream`）· `Writable`（`node:stream`）
 
-来源：[`packages/sdk/server/src/index.ts:25`](../packages/sdk/server/src/index.ts)
+来源：[`packages/sdk/server/src/index.ts:26`](../packages/sdk/server/src/index.ts)
 
 <a id="deepseek-aidsh-session-log-deepseek"></a>
 
@@ -2814,6 +2816,14 @@ export interface Config {
 export interface Config {
   /** Minimum admitted goal rounds before the model may self-report `blocked`. */
   blockedAfterConsecutiveRounds?: number
+  /**
+   * Session `agentPreset` names whose autonomous rounds must keep their final
+   * delivery machine-readable (for example a lazy-decomposition pipeline worker
+   * that emits a pure-JSON action array), so the closing prose instruction is
+   * suppressed for them. Deployments name their own presets here; the plugin
+   * hard-codes none.
+   */
+  structuredOutputPresets?: string[]
 }
 ```
 
@@ -3439,6 +3449,24 @@ export interface Config {
 ```
 
 来源：[`packages/workflow/workflow-worker-thread/src/index.ts:32`](../packages/workflow/workflow-worker-thread/src/index.ts)
+
+<a id="lingmeowtechdsh-session-tags"></a>
+
+## `@lingmeow.tech/dsh-session-tags`
+
+需要：`storageDomain`
+
+```ts config-catalog
+/** Plugin config for the session-tag registry. */
+export interface Config {
+  /** Maximum tags stored on one session; default 64. */
+  maxTagsPerSession?: number
+  /** Maximum characters in one tag; default 128. */
+  maxTagChars?: number
+}
+```
+
+来源：[`packages/session/session-tags/src/index.ts:28`](../packages/session/session-tags/src/index.ts)
 
 ## 无配置的可加载插件
 

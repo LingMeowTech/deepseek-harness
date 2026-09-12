@@ -212,6 +212,8 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'assistant/attempt': { turn: number; step: number; stream: AssistantStreamRecord[] }
 ```
 
+类型：[AssistantStreamRecord](subsystems/llm-streaming.zh.md)
+
 来源：[`packages/core/session/src/types.ts:335`](../packages/core/session/src/types.ts)
 
 <a id="assistantmessage--surface"></a>
@@ -240,7 +242,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }
 ```
 
-类型：[TokenUsage](subsystems/llm-streaming.zh.md)
+类型：[AssistantStreamRecord](subsystems/llm-streaming.zh.md) · [TokenUsage](subsystems/llm-streaming.zh.md)
 
 来源：[`packages/core/session/src/types.ts:321`](../packages/core/session/src/types.ts)
 
