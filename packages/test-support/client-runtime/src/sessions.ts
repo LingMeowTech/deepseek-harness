@@ -208,9 +208,17 @@ export class TestSessions implements ISessions {
   /** Replaceable search behavior (see {@link TestSessions.stubSearch}). */
   private searchStub: ((query: string, signal: AbortSignal) => { items: SessionSearchResultItem[]; hasMore: boolean }) | undefined
 
-  /** Bench double for the session-tags write face; no-ops keep the compile-time contract. */
+  /**
+   * Bench double for the session-tags write face; no-ops keep the compile-time contract.
+   * @param _sessionId - ignored; present to keep this double assignable to the production face.
+   * @param _tags - ignored; present to keep this double assignable to the production face.
+   */
   async setSessionTags(_sessionId: SessionId, _tags: readonly string[]): Promise<void> {}
-  /** Bench double for the session-tags remove face. */
+  /**
+   * Bench double for the session-tags remove face.
+   * @param _sessionId - ignored; present to keep this double assignable to the production face.
+   * @param _tags - ignored; present to keep this double assignable to the production face.
+   */
   async removeSessionTags(_sessionId: SessionId, _tags: readonly string[]): Promise<void> {}
   private createStub: ((opts: Parameters<ISessions['create']>[0]) => Promise<SessionId>) | undefined
 

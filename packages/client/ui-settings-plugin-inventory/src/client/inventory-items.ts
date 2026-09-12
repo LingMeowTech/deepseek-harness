@@ -49,7 +49,10 @@ export class PluginInventoryItemsController {
     this.disposed = true
   }
 
-  /** Build the face the tab's slot registration injects. */
+  /**
+   * Build the face the tab's slot registration injects.
+   * @returns the injected face, whose snapshot store stays this controller's live binding.
+   */
   inject(): PluginInventoryItemsInjected {
     return { hooks: { pluginInventoryItems: this.store } }
   }

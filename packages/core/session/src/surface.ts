@@ -130,6 +130,8 @@ export function deriveEventMessage(event: SessionEvent): Message | null {
  * Codex's ReasoningContext defaults to `current_turn`, so reasoning leaves the
  * context while that turn's text and tool calls stay. A message left with no
  * content derives to null instead of an empty assistant turn.
+ * @param message - the older-turn assistant message to project.
+ * @returns the original message when it has no reasoning block, else the copy without them, or null when nothing would remain.
  */
 export function stripReasoning(message: Message): Message | null {
   if (!message.content.some(block => block.type === 'reasoning')) return message
