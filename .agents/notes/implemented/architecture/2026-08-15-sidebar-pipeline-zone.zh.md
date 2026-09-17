@@ -4,6 +4,8 @@ Status: implemented
 
 [English](2026-08-15-sidebar-pipeline-zone.md) | 中文
 
+> 需求已转入：管线浏览 UI 现居 `dsh-lmtech-plugins` 仓，由该仓注册进 `ui-sidebar` 的 `sidebar.panellist` 列表，本仓不再实施。`ui-lmo-pipeline` 在 `lmtech-dev` 上已无实现（0 文件），`ui-sidebar` 源码也不再声明 `sidebar.pipelines` 插槽。本仓仍实现的是两个区域共同读取的标签数据面——`packages/api/session-controller` 中 `SessionManager` 的 `tagsBySession` 投影，由每次刷新逐行一次 `session.tags.list` 播种——以及 `SidebarRoot` 里壳拥有的单条搜索行。
+
 > 范围：侧边栏的管线浏览区、壳拥有的双区搜索框，以及两个区域共同刷新的客户端持久标签投影。所消费的管线 wire 面见 [LMO pipeline seam note](2026-08-15-lmo-pipeline-cordis-seam.zh.md)；该区域的退役由[上游同步 Agent Note](2026-09-12-024-upstream-sync.zh.md)持有。
 
 ## Problem

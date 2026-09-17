@@ -4,6 +4,8 @@ Status: implemented
 
 [English](2026-08-15-lmo-pipeline-cordis-seam.md) | 中文
 
+> 需求已转入：管线能力现居 `dsh-lmtech-plugins` 仓（`@lingmeow.tech/dsh-lmtech-pipeline`、`@lingmeow.tech/dsh-lmtech-pipeline-http`、`@lingmeow.tech/dsh-lmtech-tool-pipeline`），本仓不再实施。本 note 的 seam 部分——`ctx.lmoPipeline`、HMAC HTTP Provider、面向模型的 `pipeline_*` 工具与客户端 `PipelineRuntime`——在 `lmtech-dev` 上已无实现：该分支 `packages/pipeline/` 下 0 文件。标签部分仍在本仓实现（`packages/session/session-tags`、`session_tags` 存储域、`ctx.sessionTags`）。
+
 ## Problem
 
 DSH 平台迁移需要宿主与模型都能访问 lmo-server 的管线数据（project → pipeline → state → job），并且需要一种持久方式标识哪些普通 DSH 会话属于某个管线 job。两个能力都必须工作，且不能让 Go runner 维护第二套会话权威。

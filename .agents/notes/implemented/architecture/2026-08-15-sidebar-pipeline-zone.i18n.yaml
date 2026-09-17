@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-15-sidebar-pipeline-zone.md
-2026-08-15-sidebar-pipeline-zone.md: f9d1f0bd9f6a8f00fc7cd2dfab5c54d2df5a738d
-2026-08-15-sidebar-pipeline-zone.zh.md: 7c513e9cea1eb413ac91d1569931dbba0d91b020
+2026-08-15-sidebar-pipeline-zone.md: 54619d1c617e61e36298a9f4eeb4216f2f3222ab
+2026-08-15-sidebar-pipeline-zone.zh.md: 91e045347f653272b947f6ac840f3dbc135c7c91

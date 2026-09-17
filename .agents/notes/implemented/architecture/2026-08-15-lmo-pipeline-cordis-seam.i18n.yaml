@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-15-lmo-pipeline-cordis-seam.md
-2026-08-15-lmo-pipeline-cordis-seam.md: 9efe39885e4a765953cf4b9493501631950bfcdd
-2026-08-15-lmo-pipeline-cordis-seam.zh.md: 474cee21187c2182fec5378c8d49ab452783813d
+2026-08-15-lmo-pipeline-cordis-seam.md: 7cf3343ae495d8f3f2377f09e5a33c4d933dd326
+2026-08-15-lmo-pipeline-cordis-seam.zh.md: 0311696930630b65135c2021dd2ff9547dd6e900

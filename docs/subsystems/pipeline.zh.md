@@ -2,7 +2,7 @@
 
 [English](pipeline.md) | 中文
 
-LMO 管线能力——service seam、HTTP Provider、面向模型的 `pipeline_*` 工具与 `Lmo*` 记录/状态线类型——位于 `dsh-lmtech-plugins` 仓（015 落点：`@lingmeow.tech/dsh-lmtech-pipeline`、`@lingmeow.tech/dsh-lmtech-pipeline-http`、`@lingmeow.tech/dsh-lmtech-tool-pipeline`）。本仓不再保留其中任何一项：020 已把 fork 副本迁出，官方 bundle 也不再挂载 `dsh-lmo-pipeline-http` / `dsh-tool-lmo-pipeline` row。harness 侧仅保留这些会话所携带的会话标签数据面。
+LMO 管线能力——service seam、HTTP Provider、面向模型的 `pipeline_*` 工具与 `Lmo*` 记录/状态线类型——现居 `dsh-lmtech-plugins` 仓，即 015 需求转入的三个包：`@lingmeow.tech/dsh-lmtech-pipeline`、`@lingmeow.tech/dsh-lmtech-pipeline-http` 与 `@lingmeow.tech/dsh-lmtech-tool-pipeline`。`lmtech-dev` 分支不保留其中任何一项：在该工作树对 `packages/pipeline/lmo-pipeline`、`packages/pipeline/lmo-pipeline-http`、`packages/pipeline/tool-lmo-pipeline` 执行 `git ls-files` 得 0 文件，而 harness `dev` 线仍跟踪 `packages/pipeline/` 下 19 文件，且没有任何 ref 指向针对这些路径的删除提交——fork 副本未曾带上 `lmtech-dev`，在另一条线上也未被移除。本分支的官方 bundle 不挂载 `dsh-lmo-pipeline-http` / `dsh-tool-lmo-pipeline` row。harness 侧仅保留这些会话所携带的会话标签数据面。
 
 ## 会话标签
 

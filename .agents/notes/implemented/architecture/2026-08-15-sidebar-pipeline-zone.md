@@ -4,6 +4,8 @@ Status: implemented
 
 English | [中文](2026-08-15-sidebar-pipeline-zone.zh.md)
 
+> Requirement moved: the pipeline browsing UI now lives in the `dsh-lmtech-plugins` repository, which registers it into `ui-sidebar`'s `sidebar.panellist` list, and this repository no longer implements it. `ui-lmo-pipeline` has no implementation on `lmtech-dev` (0 files there) and `ui-sidebar`'s source declares no `sidebar.pipelines` slot. What stays implemented here is the tag data plane both zones read — `SessionManager`'s `tagsBySession` projection, seeded by one `session.tags.list` per row on each refresh in `packages/api/session-controller` — and the shell's single search row in `SidebarRoot`.
+
 > Scope: the sidebar pipeline browsing region, the shell-owned dual-zone search box, and the client-side durable-tag projection both zones refresh from. The pipeline wire surface this consumes is settled in the [LMO pipeline seam note](2026-08-15-lmo-pipeline-cordis-seam.md); the region's retirement is owned by the [upstream-sync Agent Note](2026-09-12-024-upstream-sync.md).
 
 ## Problem

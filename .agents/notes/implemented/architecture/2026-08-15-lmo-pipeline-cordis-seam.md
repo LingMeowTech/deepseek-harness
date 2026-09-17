@@ -4,6 +4,8 @@ Status: implemented
 
 English | [中文](2026-08-15-lmo-pipeline-cordis-seam.zh.md)
 
+> Requirement moved: the pipeline capability now lives in the `dsh-lmtech-plugins` repository (`@lingmeow.tech/dsh-lmtech-pipeline`, `@lingmeow.tech/dsh-lmtech-pipeline-http`, `@lingmeow.tech/dsh-lmtech-tool-pipeline`), and this repository no longer implements it. The seam half of this note — `ctx.lmoPipeline`, the HMAC HTTP provider, the model-facing `pipeline_*` tools, and the client `PipelineRuntime` — has no implementation on `lmtech-dev`: `packages/pipeline/` holds 0 files there. The tag half stays implemented here (`packages/session/session-tags`, the `session_tags` storage domain, `ctx.sessionTags`).
+
 ## Problem
 
 The DSH platform migration needs host and model access to lmo-server pipeline data (project → pipeline → state → job), plus a durable way to identify which ordinary DSH sessions belong to one pipeline job. Both faces must work without a second session authority in the Go runner.

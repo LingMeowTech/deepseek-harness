@@ -2,7 +2,7 @@
 
 English | [中文](pipeline.zh.md)
 
-The LMO pipeline capability — its service seam, HTTP provider, model-facing `pipeline_*` tools, and the `Lmo*` record/status wire types — lives in the `dsh-lmtech-plugins` repository (spec 015 landing: `@lingmeow.tech/dsh-lmtech-pipeline`, `@lingmeow.tech/dsh-lmtech-pipeline-http`, `@lingmeow.tech/dsh-lmtech-tool-pipeline`). This repository keeps none of it: spec 020 moved the fork copies out, so the official bundles no longer mount `dsh-lmo-pipeline-http` / `dsh-tool-lmo-pipeline` rows. What stays harness-side is the session-tag data plane those sessions carry.
+The LMO pipeline capability — its service seam, HTTP provider, model-facing `pipeline_*` tools, and the `Lmo*` record/status wire types — lives in the `dsh-lmtech-plugins` repository as the three packages the spec 015 requirement moved there: `@lingmeow.tech/dsh-lmtech-pipeline`, `@lingmeow.tech/dsh-lmtech-pipeline-http`, and `@lingmeow.tech/dsh-lmtech-tool-pipeline`. The `lmtech-dev` branch carries none of it: running `git ls-files` on `packages/pipeline/lmo-pipeline`, `packages/pipeline/lmo-pipeline-http`, and `packages/pipeline/tool-lmo-pipeline` in that worktree returns 0 files, while the harness `dev` line still tracks 19 files under `packages/pipeline/`, and no ref points at a deletion commit for those paths — the fork copies never came onto `lmtech-dev` and were never deleted from the other line. This branch's official bundles mount no `dsh-lmo-pipeline-http` / `dsh-tool-lmo-pipeline` rows. What stays harness-side is the session-tag data plane those sessions carry.
 
 ## Session tags
 

@@ -4,6 +4,8 @@ Status: implemented
 
 [English](2026-08-15-lmo-pipeline-worker-bundle.md) | 中文
 
+> 需求已转入：worker bundle 与其 profile 现居 `dsh-lmtech-plugins` 仓（`@lingmeow.tech/dsh-lmtech-pipeline`、`@lingmeow.tech/dsh-lmtech-pipeline-http`、`@lingmeow.tech/dsh-lmtech-tool-pipeline`），本仓不再实施。本 note 描述的两套部署形态在 `lmtech-dev` 上已无实现：该分支 `packages/bundle/lmo-pipeline-worker` 下 0 文件（无 `cordis.patch.yml`、无 `worker.cordis.yml`、无 `src/prompts.ts`），也没有任何 profile 元组指向 `lmo-pipeline-worker`。worker 写标签所用的会话标签注册表（`packages/session/session-tags`）仍在本仓实现。
+
 ## Problem
 
 DSH 平台迁移需要一个能被 Go runner 作为单个 pipeline job spawn 的 DSH 进程：一个具备文件系统、shell、subagent、skill 与 pipeline 工具的完整 agent harness，通过构建后的 `dsh-jsonrpc-agent` 可执行文件说冻结的 stdio JSON-RPC 握手协议，并把结构化结果写入 `<worktree>/.lmo/output.json`。worker 不得加载 web-app 层。其模型可见的执行/分解工作流必须逐字节稳定（请求缓存与快照稳定性），它铸造的每个会话都必须携带 pipeline 身份标签。

@@ -4,6 +4,8 @@ Status: implemented
 
 English | [中文](2026-08-15-lmo-pipeline-worker-bundle.zh.md)
 
+> Requirement moved: the worker bundle and its profile now live in the `dsh-lmtech-plugins` repository (`@lingmeow.tech/dsh-lmtech-pipeline`, `@lingmeow.tech/dsh-lmtech-pipeline-http`, `@lingmeow.tech/dsh-lmtech-tool-pipeline`), and this repository no longer implements it. Both deployment forms this note describes have no implementation on `lmtech-dev`: `packages/bundle/lmo-pipeline-worker` holds 0 files there (no `cordis.patch.yml`, no `worker.cordis.yml`, no `src/prompts.ts`), and no profile tuple names `lmo-pipeline-worker`. The session-tag registry the worker wrote through (`packages/session/session-tags`) stays implemented here.
+
 ## Problem
 
 The DSH platform migration needs a DSH process that the Go runner can spawn as one pipeline job: a full agent harness with filesystem, shell, subagent, skill, and pipeline tooling, speaking the frozen stdio JSON-RPC handshake over a built `dsh-jsonrpc-agent` executable, and writing structured results to `<worktree>/.lmo/output.json`. The worker must not load the web-app layer. Its model-visible execution/decompose workflows must stay byte-stable (request-cache and snapshot stability), and every session it mints must carry the pipeline identity tags.
