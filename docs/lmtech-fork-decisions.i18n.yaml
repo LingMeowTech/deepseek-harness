@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/lmtech-fork-decisions.md
-lmtech-fork-decisions.md: 77f1ce27efdd25cc34bba8c07e64399e8f667dfd
-lmtech-fork-decisions.zh.md: 810e5fb6323ed766d4fe4c73dbe02876910e019d
+lmtech-fork-decisions.md: 4dd3f58417304d74b2e2d6c3fb00ec07093eb306
+lmtech-fork-decisions.zh.md: 94d9be0d0daa44d53954a558ce1beafa70a8c347
