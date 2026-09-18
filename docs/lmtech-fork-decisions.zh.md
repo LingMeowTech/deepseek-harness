@@ -27,8 +27,8 @@
 | [P2](#p2-packagessdkserver) | B 类 | `packages/sdk/server` | 保留 `agentPreset` seam 与 Windows 退出排水修复 |
 | [P3](#p3-packagesclientui-settings-plugins) | B 类 | `packages/client/ui-settings-plugins` | 保留加宽的值组件导出 |
 | [P4](#p4-packagescompactioncompaction-basic) | B 类，无业务语义 | `packages/compaction/compaction-basic` | 保留新增测试 —— 024 后重测为 1 文件，+19 |
-| [P5](#p5-packagestest-supportclient-runtime) | B 类，编译连带 | `packages/test-support/client-runtime` | 保留 no-op 双打；随 016 一起删除 |
-| [P6](#p6-six-client-packages-with-fixture-coupling) | B 类，编译连带 | `packages/client/{ui-workflow-run,ui-trajectory,ui-theme,ui-subagent,ui-jobs,locale}` | 保留 fixture 字段 —— 它现在连带的是 024 重落的 `tagsBySession` 投影；随 016 一起删除 |
+| [P5](#p5-packagestest-supportclient-runtime) | B 类，编译连带 | `packages/test-support/client-runtime` | 保留 no-op 双打 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据：`.agents/notes/implemented/architecture/2026-09-02-s-series-merge-scope.md`） |
+| [P6](#p6-six-client-packages-with-fixture-coupling) | B 类，编译连带 | `packages/client/{ui-workflow-run,ui-trajectory,ui-theme,ui-subagent,ui-jobs,locale}` | 保留 fixture 字段 —— 它现在连带的是 024 重落的 `tagsBySession` 投影；**本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上） |
 | [P7](#p7-packagesclientui-renderer) | B 类，无业务语义 | `packages/client/ui-renderer` | 保留 `types: ["node"]` 构建配置 |
 | [S1](#three-new-slots-minimal-native-extension) | 新增插槽，已退役 | `sidebar.pipelines` | **被 024 取代**：fork 插槽已删除；上游 `sidebar.panellist` 列表加布局 `main` keyed 插槽即插入点 |
 | [S2](#three-new-slots-minimal-native-extension) | 新增插槽，已退役 | `conversation.input.hindsight` | **被 024 取代**：fork 座位已删除（T041） |
@@ -51,31 +51,31 @@
 | 2 | `packages/pipeline/lmo-pipeline-http` | A | lmtech HTTP 传输面（client + 配置 schema） | 015（Approved）—— **已收敛**；需求已转入 plugins 仓的 `packages/dsh-lmtech-pipeline-http`，本仓不再实施 | 0 文件 —— 2026-09-17 在 `83b9edf642` 实测 `git ls-files packages/pipeline` 输出为空 |
 | 3 | `packages/pipeline/tool-lmo-pipeline` | A | lmtech 管线工具（`defineTool` 业务工具） | 015（Approved）—— **已收敛**；需求已转入 plugins 仓的 `packages/dsh-lmtech-tool-pipeline`，本仓不再实施 | 0 文件 —— 2026-09-17 在 `83b9edf642` 实测 `git ls-files packages/pipeline` 输出为空 |
 | 4 | `packages/api/session-controller` | A | lmtech 会话控制面（三个 `@Remote` 标签动词 + 客户端 `tagsBySession` 投影） | 011（Draft）—— 登记 | 8 文件，+225/-8 |
-| 5 | `packages/session/session-tags` | A | 持久标签注册表及其整个包 | 016（Approved 2026-09-11，依据主仓 `docs/specs/016-dsh-plugins-session-tags/spec.md` 的 Status 行）—— **待清**：本仓副本仍在 | 合并提交 `af2a1e07ca` 处 10 文件，+487；2026-09-17 在 `83b9edf642` 用 `git diff --numstat c291e7961a HEAD -- packages/session/session-tags` 重测：9 文件，+654 |
+| 5 | `packages/session/session-tags` | A | 持久标签注册表及其整个包 | 016（Approved 2026-09-11，依据主仓 `docs/specs/016-dsh-plugins-session-tags/spec.md` 的 Status 行）—— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据：`.agents/notes/implemented/architecture/2026-09-02-s-series-merge-scope.md`）：本仓副本即按该口径留在本树 | 合并提交 `af2a1e07ca` 处 10 文件，+487；2026-09-17 在 `83b9edf642` 用 `git diff --numstat c291e7961a HEAD -- packages/session/session-tags` 重测：9 文件，+654 |
 | 6 | `packages/bundle/lmo-pipeline-worker` | A | 仅属 lmtech 的 bundle 被放进官方 bundle 树 | 018（Approved 2026-09-11，依据主仓 `docs/specs/018-dsh-plugins-lmo-server-client/spec.md` 的 Status 行）/ 012 US3 —— **已收敛**，**两棵树中均已不存在**：该 bundle 在上游与 fork 中都不再有，且 2026-09-17 在 `83b9edf642` 实测 `git ls-files packages/bundle/lmo-pipeline-worker` 输出为空 | 0 文件 |
 | 7 | `packages/client/ui-sidebar` | B（A+B 混合） | `sidebar.pipelines` 区域**被 024 删除**（上游 `sidebar.panellist` 列表加布局 `main` keyed 插槽即插入点）；剩下的是 shell 级共享搜索行，属 A 类，其 `searchQuery` 下发在本仓已无消费方（已登记缺口） | 020 FR-024 / 013 US2 —— 区域由 024 退役（T019/T020/T041/T042） | 7 文件，+296/-6 |
 | 8 | `packages/client/ui-conversation` | B | fork 的 `conversation.input.hindsight` 座位**被 024 退役**（T041）；剩余行是测试 fixture 对齐 | 020 FR-024 —— 座位由 024 退役 | 8 文件，+27/-2 |
-| 9 | `packages/client/ui-tool` | B | 无源码行：残留行只有一处 `tagsBySession` fixture 补字段（会话标签编译连带）；spec 的「toolview priority 覆盖」读法无实测差异支撑（[B3](#b3-packagesclientui-tool)） | 020 FR-024（B 类）/ 016（fixtures）—— **待清**：`tagsBySession` fixture 仍在 `tests/coverage-tails.client.spec.tsx` 中（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
+| 9 | `packages/client/ui-tool` | B | 无源码行：残留行只有一处 `tagsBySession` fixture 补字段（会话标签编译连带）；spec 的「toolview priority 覆盖」读法无实测差异支撑（[B3](#b3-packagesclientui-tool)） | 020 FR-024（B 类）/ 016（fixtures）—— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）：`tagsBySession` fixture 位于 `tests/coverage-tails.client.spec.tsx`（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
 | 10 | `packages/client/ui-settings-plugin-inventory` | B | `settings.plugin.inventory.item` —— fork 独有插槽 | 020 FR-024 | 5 文件，+129/-5 |
 | 11 | `packages/subagent/subagent` | A —— **已由 024 收敛** | `decision-answer.ts`、`pendingQuestions` 与 `list-children` 排序反转均已移除（T032/T033/T036）；理由收编于 [decision-answer 退役 Agent Note](../.agents/notes/implemented/simplification/2026-09-12-subagent-decision-answer-retirement.zh.md) | 007（Draft）+ 013 US4 —— 由 024 收敛 | 合并提交处 4 文件，+267/-15，其后 0 文件 |
 | 12 | `packages/client/ui-primitives` | 待评估 —— **keep as B** | 在上游组件上重落 pin，新增 required props `pinLabel` / `unpinLabel` 并经 `t(...)` 接线，取代硬编码中文 label（T055/T056） | 013 US1 —— 由 024 重落 | 3 文件，+118/-10 |
 | 13 | `packages/llm/token-meter` | 待评估 —— **keep as B** | 只重落 `cacheHitRatio` 的 view 层三处；压缩语义以上游为准（T051） | 013 US3 —— 由 024 重落 | 3 文件，+31/-1 |
 | 14 | `packages/core/session` | 待评估 —— **keep as B** | `stripReasoning` 重落为非当前轮派生，增量缓存保持不动，事件与格式版本不变（T052） | 013 US4 —— 由 024 重落 | 3 文件，+57/-4 |
 | 15 | `packages/goal/tool-goal` | A —— **已由 024 收敛** | `STRUCTURED_OUTPUT_PRESETS` 已移除；preset 清单改为 `structuredOutputPresets` 这个 `Config` 字段，收尾抑制保留（T048） | 013 US5 —— 由 024 收敛 | 3 文件，+85/-4 |
-| 16 | `packages/bundle/web-app` | 待评估 —— 由 024 更新 | 一条 `@lingmeow.tech/dsh-session-tags` patch row 加配套 workspace 依赖，已删的 pipeline seam row 以注释登记并有测试断言其缺席（T015） | 018（Approved 2026-09-11，依据主仓 `docs/specs/018-dsh-plugins-lmo-server-client/spec.md` 的 Status 行）—— **待改**：`cordis.patch.yml:80-81` 与 `package.json:42` 仍写 `@lingmeow.tech/dsh-session-tags`（2026-09-17 在 `83b9edf642` 实测） | 3 文件，+59 |
+| 16 | `packages/bundle/web-app` | 待评估 —— 由 024 更新 | 一条 `@lingmeow.tech/dsh-session-tags` patch row 加配套 workspace 依赖，已删的 pipeline seam row 以注释登记并有测试断言其缺席（T015） | 018（Approved 2026-09-11，依据主仓 `docs/specs/018-dsh-plugins-lmo-server-client/spec.md` 的 Status 行）—— **按 s-series 口径保留 fork 包；FR-008 的改指未执行，已判定为设计取舍**（浏览器半边不 value-import 宿主包，row 指向 fork 自有的 `@lingmeow.tech/dsh-session-tags` 在功能上等价）：`cordis.patch.yml:80-81` 与 `package.json:42` 写 `@lingmeow.tech/dsh-session-tags`（2026-09-17 在 `83b9edf642` 实测） | 3 文件，+59 |
 | 17 | `packages/boot/app-boot` | 待评估 —— **已由 024 收敛** | `lmo-pipeline-worker` profile 模板在两棵树中均不存在；fork 唯一残留行是断言该 profile 与其 bundle 保持缺席的测试 | 012 US3 / 018 FR-008 —— **已收敛**：唯一残留行是 `tests/worker-profile.spec.ts`（+43），2026-09-17 在 `83b9edf642` 重测 | 1 文件，+43 |
-| 18 | `packages/extensions/tool-cordis` | 待评估 | `src/api-catalog.ts` —— lmtech 条目写进官方目录（条目级归属，见 [R1](#r1-draft-owned-a-class-residuals-registered-not-executed)）；024 把 016 条目留给目录重跑清除 | 016 / 007 —— 登记，其中 016 那一半 **待清**：`src/api-catalog.ts` 仍带 `@Remote('tagsList'/'tagsSet'/'tagsRemove')`（1467/1473/1479 行）与 `sessionTags` 服务条目（1959 行），2026-09-17 在 `83b9edf642` 实测 | 1 文件，+84/-3 |
+| 18 | `packages/extensions/tool-cordis` | 待评估 | `src/api-catalog.ts` —— lmtech 条目写进官方目录（条目级归属，见 [R1](#r1-draft-owned-a-class-residuals-registered-not-executed)）；016 条目按 s-series 口径保留，目录重跑时随之带出 | 016 / 007 —— 登记，其中 016 那一半 **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）：`src/api-catalog.ts` 带 `@Remote('tagsList'/'tagsSet'/'tagsRemove')`（1467/1473/1479 行）与 `sessionTags` 服务条目（1959 行），2026-09-17 在 `83b9edf642` 实测 | 1 文件，+84/-3 |
 | 19 | `packages/llm/llm-pi-ai` | 待评估 → B | 通用 `reasoningTokens` wire 映射（[P1](#p1-packagesllmllm-pi-ai)） | 020 保留 | 3 文件，+52 |
 | 20 | `packages/sdk/server` | 待评估 → B | `agentPreset` seam 与 Windows 退出排水（[P2](#p2-packagessdkserver)） | 020 保留 | 1 文件，+17 |
 | 21 | `packages/client/ui-settings-plugins` | 待评估 → B | 加宽的 `SecretField` / `ValueField` 导出（[P3](#p3-packagesclientui-settings-plugins)） | 020 保留 | 1 文件，+2 |
 | 22 | `packages/compaction/compaction-basic` | 待评估 → B | 纯测试新增，无产品行为（[P4](#p4-packagescompactioncompaction-basic)） | 020 保留 | 1 文件，+19 |
-| 23 | `packages/test-support/client-runtime` | 待评估 → B | 会话标签 no-op 双打，编译连带（[P5](#p5-packagestest-supportclient-runtime)） | 020 暂保留 → **待清**（随 016）：`src/sessions.ts` 仍带 `setSessionTags` / `removeSessionTags` 双打（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+6 |
-| 24 | `packages/client/ui-workflow-run` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 暂保留 → **待清**（随 016）：fixture 仍在（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
-| 25 | `packages/client/ui-trajectory` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 暂保留 → **待清**（随 016）：fixture 仍在（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
-| 26 | `packages/client/ui-theme` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 暂保留 → **待清**（随 016）：fixture 仍在（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
-| 27 | `packages/client/ui-subagent` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 暂保留 → **待清**（随 016）：fixture 仍在（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
-| 28 | `packages/client/ui-jobs` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 暂保留 → **待清**（随 016）：fixture 仍在（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
-| 29 | `packages/client/locale` | 待评估 → B | 一行测试 fixture `tagsBySession`；inventory 记的 `ui-locale` 即本包（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 暂保留 → **待清**（随 016）：fixture 仍在（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
+| 23 | `packages/test-support/client-runtime` | 待评估 → B | 会话标签 no-op 双打，编译连带（[P5](#p5-packagestest-supportclient-runtime)） | 020 保留 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）：`src/sessions.ts` 含 `setSessionTags` / `removeSessionTags` 双打（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+6 |
+| 24 | `packages/client/ui-workflow-run` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 保留 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）：fixture 在位（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
+| 25 | `packages/client/ui-trajectory` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 保留 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）：fixture 在位（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
+| 26 | `packages/client/ui-theme` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 保留 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）：fixture 在位（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
+| 27 | `packages/client/ui-subagent` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 保留 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）：fixture 在位（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
+| 28 | `packages/client/ui-jobs` | 待评估 → B | 一行测试 fixture `tagsBySession`（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 保留 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）：fixture 在位（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
+| 29 | `packages/client/locale` | 待评估 → B | 一行测试 fixture `tagsBySession`；inventory 记的 `ui-locale` 即本包（[P6](#p6-six-client-packages-with-fixture-coupling)） | 020 保留 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）：fixture 在位（2026-09-17 在 `83b9edf642` 实测） | 1 文件，+1 |
 | 30 | `packages/client/ui-renderer` | 待评估 → B | `tsconfig.json` 增 `types: ["node"]`，仅构建配置（[P7](#p7-packagesclientui-renderer)） | 020 保留 | 1 文件，+2 |
 
 另有两处登记补全全貌，但不占分类行：
@@ -113,7 +113,7 @@
 
 2026-09-12（024 之后）实测：`tests/coverage-tails.client.spec.tsx` —— 一处 `tagsBySession` fixture 补字段，**且没有任何源码行**。同步之前记录的五个 card spec 行是上游删除、由本次合并采纳（T022），故 fork 在工具包上的残留差异就是这一行 fixture，spec 的「toolview priority 覆盖」读法在实测差异中仍无对应物。
 
-裁决：按 B 类保留。台账与门禁白名单记录的是类别，而残留行是无产品行为的编译连带，随 spec 016 一并删除。若确有 priority 覆盖，须先补证再据此改写本行。
+裁决：按 B 类保留。台账与门禁白名单记录的是类别，而残留行是无产品行为的编译连带，属本仓按设计保留的会话标签数据面。若确有 priority 覆盖，须先补证再据此改写本行。
 
 ### B4 `packages/client/ui-settings-plugin-inventory`
 
@@ -147,7 +147,7 @@
 
 行：`src/sessions.ts`。
 
-裁决：暂保留，**待清**，随 spec 016（session-tags 迁出）处理。该文件补 no-op 双打（`setSessionTags`、`removeSessionTags`）使会话标签读写面可编译，2026-09-17 在 `83b9edf642` 实测它们仍在（`src/sessions.ts` 两处都在，快照存储的构造函数带 `tagsBySession`）。inventory 为本行记下的路径 `packages/client/runtime` 属 017，其在本仓已无文件（`git ls-files packages/client/runtime` 输出为空）；该需求已转入 plugins 仓的 `packages/dsh-lmtech-pipeline-client`，本仓不再实施，而 fork 的 `dev` 线仍跟踪其 78 个文件，待清。
+裁决：保留 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据：`.agents/notes/implemented/architecture/2026-09-02-s-series-merge-scope.md`）。该文件补 no-op 双打（`setSessionTags`、`removeSessionTags`）使会话标签读写面可编译，2026-09-17 在 `83b9edf642` 实测两处俱在（`src/sessions.ts` 两处都在，快照存储的构造函数带 `tagsBySession`）。inventory 为本行记下的路径 `packages/client/runtime` 属 017，其在本仓已无文件（`git ls-files packages/client/runtime` 输出为空）；该需求已转入 plugins 仓的 `packages/dsh-lmtech-pipeline-client`，本仓不再实施，而 fork 的 `dev` 线仍跟踪其 78 个文件，待清。
 
 ### P6 六个 fixture 连带的客户包
 
@@ -155,7 +155,7 @@
 
 包与行：`packages/client/ui-workflow-run/tests/workflow-run.client.spec.tsx`、`packages/client/ui-trajectory/tests/views.client.spec.tsx`、`packages/client/ui-theme/tests/appearance-row.client.spec.tsx`、`packages/client/ui-subagent/tests/conversation-ui.client.spec.tsx`、`packages/client/ui-jobs/tests/job-list-action.client.spec.tsx`、`packages/client/locale/tests/language-row.client.spec.tsx`。
 
-裁决：暂保留，**待清**，随 spec 016 一并删除。各为一行测试 fixture 补字段（`tagsBySession`），由会话标签面连带 —— 该面已被 024 重落为会话列表快照上的 `tagsBySession` 投影；2026-09-17 在 `83b9edf642` 实测六处都仍在（`git grep -c tagsBySession` 在上述六个文件里各命中一次）。inventory 的 `ui-locale` 实为本 `packages/client/locale`。
+裁决：保留 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据同上）。各为一行测试 fixture 补字段（`tagsBySession`），由会话标签面连带 —— 该面已被 024 重落为会话列表快照上的 `tagsBySession` 投影；2026-09-17 在 `83b9edf642` 实测六处俱在（`git grep -c tagsBySession` 在上述六个文件里各命中一次）。inventory 的 `ui-locale` 实为本 `packages/client/locale`。
 
 ### P7 `packages/client/ui-renderer`
 
@@ -212,7 +212,7 @@
 
 本节所述的 worker bundle 在两棵树中都已不存在：`packages/bundle/lmo-pipeline-worker` 既不在目标树也不在 fork 中，故它的 row 与 `lmo-pipeline-worker` profile 模板是「已消失」而非「仅登记」。harness 仍在挂载的是 web-app bundle 的 `session-tags` row。pipeline seam 三包仍然不在此仓，且[上游同步](../.agents/notes/implemented/architecture/2026-09-12-024-upstream-sync.zh.md)以「上游优先」退役了 fork 自有的侧栏区域与客户端 pipelines service，改由上游面板列表承担，故 `packages/pipeline/**` 继续留在 fork 差异之外。2026-09-17 在 `83b9edf642` 重测，本节点到的两条路径都维持该状态：`packages/pipeline` 与 `packages/bundle/lmo-pipeline-worker` 各自跟踪 0 个文件。017 归属的 `packages/client/runtime` 在本仓同样无文件（`git ls-files packages/client/runtime` 输出为空，`upstream/master` 从未收录该路径），其需求现在位于 plugins 仓的 `packages/dsh-lmtech-pipeline-client`；fork 的 `dev` 线仍跟踪该路径 78 个文件（`git ls-tree -r dev --name-only packages/client/runtime`），待清 —— 而在该线上删除这些文件的提交 `9a4031f2f5`（`fix(build): remove orphan packages/client/runtime left by upstream Runtime removal`）已无任何 ref 指向。
 
-收敛之外还有一处连带需要修复：`packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts` 仍断言两个已被删除的 row（patch 列表与 worker 配置各一处），故收敛后该包的测试链（`vitest run packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts`）以两条 "must mount" 断言失败。现已在期望值内联标注删除与归属 spec，该链恢复绿。删除留下的**功能性问题归 spec 018**：worker profile 已不再挂载任何 `ctx.lmoPipeline` seam —— 收敛前的包名在何处都解析不到；由 018 决定按重安置后的插件名补回该 row。**已收敛**：2026-09-17 在 `83b9edf642` 实测，该测试链已随该包离开 —— `packages/bundle/lmo-pipeline-worker` 在本仓跟踪 0 个文件，故 018 在此处的收敛形态是该 bundle 从两棵树中消失；仍待改的是 web-app bundle 的 `session-tags` row 与其依赖（`cordis.patch.yml:80-81`、`package.json:42`）。
+收敛之外还有一处连带需要修复：`packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts` 仍断言两个已被删除的 row（patch 列表与 worker 配置各一处），故收敛后该包的测试链（`vitest run packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts`）以两条 "must mount" 断言失败。现已在期望值内联标注删除与归属 spec，该链恢复绿。删除留下的**功能性问题归 spec 018**：worker profile 已不再挂载任何 `ctx.lmoPipeline` seam —— 收敛前的包名在何处都解析不到；由 018 决定按重安置后的插件名补回该 row。**已收敛**：2026-09-17 在 `83b9edf642` 实测，该测试链已随该包离开 —— `packages/bundle/lmo-pipeline-worker` 在本仓跟踪 0 个文件，故 018 在此处的收敛形态是该 bundle 从两棵树中消失；web-app bundle 的 `session-tags` row 与其依赖按 s-series 口径保留（FR-008 的改指未执行，已判定为设计取舍；`cordis.patch.yml:80-81`、`package.json:42`）。
 
 ## R1 Draft 归属的 A 类残留：只登记，不执行
 
@@ -223,15 +223,15 @@ spec 020 只执行归属 spec 为 Approved（`015`）的 A 类面；024 随后�
 | 包 | 文件数 | 归属 spec（状态） | 登记动作 |
 | --- | --- | --- | --- |
 | `packages/api/session-controller` | 8 | 011（Draft） | 移除对 `dsh-session-tags` 的反向依赖 / RPC 收口；024 保留三个 `@Remote` 标签动词与客户端 `tagsBySession` 投影 |
-| `packages/session/session-tags` | 10 | 016（Approved 2026-09-11，依据主仓 `docs/specs/016-dsh-plugins-session-tags/spec.md` 的 Status 行）—— **待清** | 会话标签业务面迁入 plugins 仓；双语 README 随该包一并删除。2026-09-17 在 `83b9edf642` 重测，该包仍在本仓：对 `c291e7961a` 为 9 文件，+654 |
+| `packages/session/session-tags` | 10 | 016（Approved 2026-09-11，依据主仓 `docs/specs/016-dsh-plugins-session-tags/spec.md` 的 Status 行）—— **本仓自有的会话标签数据面，按 s-series 口径保留**（依据：`.agents/notes/implemented/architecture/2026-09-02-s-series-merge-scope.md`） | 会话标签业务面按 s-series 口径留在本仓；双语 README 随该包一同保留。2026-09-17 在 `83b9edf642` 重测，该包在本仓：对 `c291e7961a` 为 9 文件，+654 |
 | `packages/subagent/subagent` | 0 | 007（Draft）+ 013 US4 | **已由 024 收敛**：`decision-answer`、`pendingQuestions` 与 `list-children` 排序反转均已移除；理由收编于[退役 Agent Note](../.agents/notes/implemented/simplification/2026-09-12-subagent-decision-answer-retirement.zh.md) |
 | `packages/client/ui-primitives` | 3 | 013 US1 | 由 024 重落为 keep-as-B 面：pin 回到上游组件上、新增 required props `pinLabel` / `unpinLabel`，不再有硬编码中文 label（T055/T056） |
 | `packages/llm/token-meter` | 3 | 013 US3 | 由 024 重落为 keep-as-B 面：只保留 `cacheHitRatio` view 层三处（T051） |
 | `packages/core/session` | 3 | 013 US4 | 由 024 重落为 keep-as-B 面：非当前轮 `stripReasoning`，增量缓存保持不动（T052） |
 | `packages/goal/tool-goal` | 3 | 013 US5 | **已由 024 收敛**：preset 清单改为 `Config` 字段，不再硬编码 lmtech preset 名（T048） |
 | `packages/boot/app-boot` | 1 | 012 US3 / 018 FR-008 —— **已收敛** | **已由 024 收敛**：`lmo-pipeline-worker` profile 模板在两棵树中均不存在；残留行是断言该缺席的测试。2026-09-17 在 `83b9edf642` 重测，该行为 `tests/worker-profile.spec.ts`，+43 |
-| `packages/bundle/web-app` | 3 | 018（Approved 2026-09-11，依据主仓 `docs/specs/018-dsh-plugins-lmo-server-client/spec.md` 的 Status 行）—— **待改** | 024 保留 `session-tags` row 与其依赖；其余 row 收敛归 018。2026-09-17 在 `83b9edf642` 实测两者仍在：`cordis.patch.yml:80-81`（`id: session-tags`、`name: '@lingmeow.tech/dsh-session-tags'`）与 `package.json:42`（`"@lingmeow.tech/dsh-session-tags": "workspace:^"`） |
-| `packages/extensions/tool-cordis` | 1 | 016 / 007 —— **待清**（016 那一半） | 条目级归属，2026-09-12 实测 `+84/-3`（`src/api-catalog.ts`）：`lmoPipeline` 的 `SERVICE_API` 条目与其 `Lmo*` 类型条目已经消失，007 的条目（`SubagentRuntime.pendingQuestions`、`DecisionAnswer*` 类型）在退役后重跑目录时消失，只剩 016 的条目（`@Remote('tagsList'/'tagsSet'/'tagsRemove')` 与 `sessionTags` 服务）保持登记 —— 2026-09-17 在 `83b9edf642` 实测这三处与 `sessionTags` 服务条目仍在（1467/1473/1479 行与 1959 行） |
+| `packages/bundle/web-app` | 3 | 018（Approved 2026-09-11，依据主仓 `docs/specs/018-dsh-plugins-lmo-server-client/spec.md` 的 Status 行）—— **按 s-series 口径保留 fork 包；FR-008 的改指未执行，已判定为设计取舍**（浏览器半边不 value-import 宿主包） | `session-tags` row 与其依赖保留。2026-09-17 在 `83b9edf642` 实测两者在位：`cordis.patch.yml:80-81`（`id: session-tags`、`name: '@lingmeow.tech/dsh-session-tags'`）与 `package.json:42`（`"@lingmeow.tech/dsh-session-tags": "workspace:^"`） |
+| `packages/extensions/tool-cordis` | 1 | 016 / 007 —— **本仓自有的会话标签数据面，按 s-series 口径保留**（016 那一半，依据同上） | 条目级归属，2026-09-12 实测 `+84/-3`（`src/api-catalog.ts`）：`lmoPipeline` 的 `SERVICE_API` 条目与其 `Lmo*` 类型条目已经消失，007 的条目（`SubagentRuntime.pendingQuestions`、`DecisionAnswer*` 类型）在退役后重跑目录时消失，只剩 016 的条目（`@Remote('tagsList'/'tagsSet'/'tagsRemove')` 与 `sessionTags` 服务）保持登记 —— 2026-09-17 在 `83b9edf642` 实测这三处与 `sessionTags` 服务条目位于（1467/1473/1479 行与 1959 行） |
 
 ## Z1 已归零登记
 
