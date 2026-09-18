@@ -7,7 +7,7 @@
 - 差异包集合落在 B 类白名单内，且每个 B 类包钉死允许文件集与新增行数上限。上述 024 之前的「16 包外加 [G1](#g1-generated-client-slot-catalog-b-class-derivative) 的生成插槽目录」已不再成立：024 退役了三个 fork 插槽中的两个、收敛了第 11 与第 15 行，并以 `c291e7961a` 为基准重测每一行，故 plugins 仓的白名单须按该实测重新钉定（R7）；
 - `015` 归属的 A 类 3 包已从差异中消失，两个已归零登记保持归零（[A1](#a1-spec-015-landing-the-fork-pipeline-copies-leave)、[Z1](#z1-already-zeroed-registrations)）；
 - 任何 B 类官方包都不依赖 lmtech 包；
-- Draft 归属的 A 类残留以警告（而非失败）报出（[R1](#r1-draft-owned-a-class-residuals-registered-not-executed)）。
+- 归属已定论（007 与 013 已取消、011 与 012 记 `Closed · 已交付`、016 / 018 已于 2026-09-11 获批）的 A 类残留以警告（而非失败）报出（[R1](#r1-draft-owned-a-class-residuals-registered-not-executed)）。
 
 两条规则裁决每一条目：
 
@@ -214,7 +214,7 @@
 
 收敛之外还有一处连带需要修复：`packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts` 仍断言两个已被删除的 row（patch 列表与 worker 配置各一处），故收敛后该包的测试链（`vitest run packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts`）以两条 "must mount" 断言失败。现已在期望值内联标注删除与归属 spec，该链恢复绿。删除留下的**功能性问题归 spec 018**：worker profile 已不再挂载任何 `ctx.lmoPipeline` seam —— 收敛前的包名在何处都解析不到；由 018 决定按重安置后的插件名补回该 row。**已收敛**：2026-09-17 在 `83b9edf642` 实测，该测试链已随该包离开 —— `packages/bundle/lmo-pipeline-worker` 在本仓跟踪 0 个文件，故 018 在此处的收敛形态是该 bundle 从两棵树中消失；web-app bundle 的 `session-tags` row 与其依赖按 s-series 口径保留（FR-008 的改指未执行，已判定为设计取舍；`cordis.patch.yml:80-81`、`package.json:42`）。
 
-## R1 Draft 归属的 A 类残留：只登记，不执行
+## R1 归属已定论的 A 类残余：登记，不代执行
 
 <a id="r1-draft-owned-a-class-residuals-registered-not-executed"></a>
 
@@ -246,7 +246,7 @@ spec 020 只执行归属 spec 为 Approved（`015`）的 A 类面；024 随后�
 本页点名的两个 plugins 仓脚本（`check-harness-diff.mjs`、`check-slot-contract-mirror.mjs`）在两棵 harness 树中都不存在 —— 它们属于 plugins 仓（R7），故下列命令须在持有它们的 worktree 中执行，而它们携带的 B 类白名单须按 C1 的 2026-09-12 实测重新钉定。
 
 ```bash
-# from dsh-lmtech-plugins/worktree/020-impl — expected exit 0 (warnings only for the Draft-owned rows of R1)
+# from dsh-lmtech-plugins/worktree/020-impl — expected exit 0 (warnings only for the R1 rows whose owning specs are settled)
 node scripts/check-harness-diff.mjs --harness ../../../../deepseek-harness/worktree/lmtech-dev ; echo "exit=$?"
 node scripts/check-harness-diff.mjs --list
 node scripts/check-slot-contract-mirror.mjs --fork-root ../../../../deepseek-harness/worktree/lmtech-dev

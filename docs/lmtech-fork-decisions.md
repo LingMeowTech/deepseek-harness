@@ -7,7 +7,7 @@ This page is the single index of every deliberate divergence this fork keeps fro
 - the diff's package set stays inside the B-class whitelist, with each B-class package pinned to an allowed file set and an added-line ceiling. The pre-024 whitelist — 16 packages plus the generated slot catalog of [G1](#g1-generated-client-slot-catalog-b-class-derivative) — no longer holds: 024 retires two of the three fork slots, converges rows 11 and 15, and re-measures every row against `c291e7961a`, so the plugins-repository whitelist must be re-pinned from that measurement (R7);
 - the three `015`-owned A-class packages are gone from the diff and the two already-zeroed registrations stay zeroed ([A1](#a1-spec-015-landing-the-fork-pipeline-copies-leave), [Z1](#z1-already-zeroed-registrations));
 - no B-class official package depends on an lmtech package;
-- the Draft-owned A-class residuals are reported as warnings, not failures ([R1](#r1-draft-owned-a-class-residuals-registered-not-executed)).
+- the A-class residuals whose owning specs are settled (007 and 013 cancelled, 011 and 012 `Closed · delivered`, 016 / 018 Approved since 2026-09-11) are reported as warnings, not failures ([R1](#r1-draft-owned-a-class-residuals-registered-not-executed)).
 
 Two rules decide every entry:
 
@@ -202,7 +202,9 @@ The worker bundle this section described no longer exists in either tree: `packa
 
 One consequence needed repair beyond the generated artifacts: `packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts` still asserted both dropped rows in the patch list and in the worker config, so the package's test lane (`vitest run packages/bundle/lmo-pipeline-worker/tests/bundle.spec.ts`) failed with two "must mount" assertions after the convergence. The expectations now carry the removal with the owning spec inline, and the lane is green again. What the removal leaves open is a functional question for spec 018: the worker profile no longer mounts any `ctx.lmoPipeline` seam, because the pre-rehoming package names resolve nowhere — 018 owns re-adding that row under the rehomed plugin name. **Converged**: measured 2026-09-17 at `83b9edf642`, that lane left with the package — `packages/bundle/lmo-pipeline-worker` tracks 0 files in this tree, so what 018 converges here is the bundle's absence from both trees, and the web-app bundle's `session-tags` row and dependency stay by design (`cordis.patch.yml:80-81`, `package.json:42`; the FR-008 re-point was not executed, judged a design trade-off).
 
-## R1 Draft-owned A-class residuals: registered, not executed
+## R1 A-class residuals with settled owning specs: registered, not executed
+
+<a id="r1-draft-owned-a-class-residuals-registered-not-executed"></a>
 
 Spec 020 executes only the A-class face whose owning spec is Approved (`015`); 024 then executes the parts its own spec owns. Every other A-class package is registered back to its owning spec - the fork keeps its diff until the owning spec lands; 007 and 013 stand cancelled (024 judged 007 converged, with the 2026-09-12 retirement note on file, and re-judged 013's clauses), 011 and 012 are recorded `Closed · delivered`, and 016 / 018 have been Approved since 2026-09-11 (basis: the Status lines of the main repository's `docs/specs/016-dsh-plugins-session-tags/spec.md` and `docs/specs/018-dsh-plugins-lmo-server-client/spec.md`). Measured status on 2026-09-12 in the 024 worktree against `c291e7961a`:
 
@@ -228,7 +230,7 @@ Spec 020 executes only the A-class face whose owning spec is Approved (`015`); 0
 The two plugins-repository scripts this page names (`check-harness-diff.mjs`, `check-slot-contract-mirror.mjs`) exist in neither harness tree - they belong to the plugins repository (R7), so the commands below run from the worktree that holds them, and the B-class whitelist they carry must be re-pinned from the 2026-09-12 measurement in C1.
 
 ```bash
-# from dsh-lmtech-plugins/worktree/020-impl — expected exit 0 (warnings only for the Draft-owned rows of R1)
+# from dsh-lmtech-plugins/worktree/020-impl — expected exit 0 (warnings only for the R1 rows whose owning specs are settled)
 node scripts/check-harness-diff.mjs --harness ../../../../deepseek-harness/worktree/lmtech-dev ; echo "exit=$?"
 node scripts/check-harness-diff.mjs --list
 node scripts/check-slot-contract-mirror.mjs --fork-root ../../../../deepseek-harness/worktree/lmtech-dev
