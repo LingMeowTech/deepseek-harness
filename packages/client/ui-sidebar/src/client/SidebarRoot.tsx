@@ -1,12 +1,13 @@
 /**
- * Sidebar shell: column geometry only. Collapse is a slide plus crossfade:
+ * Sidebar shell: column geometry and global panel navigation.
+ * Collapse is a slide plus crossfade:
  * content freezes at its expanded width (inline style) and fades out in place
  * while the sliding column (AppFrame grid tracks) clips it — nothing reflows
- * mid-slide. At settle the wide-only content unmounts and the four upper
+ * mid-slide. At settle the wide-only content unmounts and the upper
  * controls enter the 56px rail from the same horizontal offset (one icon each,
  * same top-down order) on one fade that ends with the slide. The bottom-pinned
  * settings control only fades. The workspace/session browsing region between
- * the New Session button and the foot is the `sidebar.workspaces` registrant's,
+ * global panel rows and the foot is the `sidebar.workspaces` registrant's,
  * and the foot holds `sidebar.settings` plus `sidebar.footer.action`; the shell
  * hands them the wide flag (plus an expand request callback for the browser).
  *
@@ -18,12 +19,12 @@
 import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  FishLogo,
-  IconCloseFill14, IconNewChatOutline16, IconPanelLeftOutline16,
-  IconSearchOutline16,
-  Tooltip,
+  FishLogo, IconNewChatOutline16, IconPanelLeftOutline16, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { SidebarRootComponentProps } from './contract/slots.ts'
+import type { InjectFace, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {
+  SidebarPanelMetadata, SidebarRootComponentProps, SidebarRootInjected, SidebarSectionOwnerProps,
+} from './contract/slots.ts'
 import css from './SidebarRoot.module.css'
 
 /** Wide-content unmount delay; matches the 150ms wide-content fade-out. */
@@ -47,21 +48,36 @@ function localBuildVersion(): string | undefined {
     + (process.env.DSH_CLIENT_GIT_DIRTY === 'true' ? '-dirty' : '')
 }
 
-/** Column slide length; rail-search focus waits it out (matches the browser's). */
-const EXPAND_SLIDE_MS = 300
+type PanelRowProps =
+  Pick<SidebarPanelMetadata, 'id' | 'label'>
+  & Pick<SidebarSectionOwnerProps, 'wide'>
+  & Pick<PropsRuntime<'sidebar'>, 'usePanelInfo'>
+  & Pick<InjectFace<SidebarRootInjected>, 'selectPanel'>
+  & PropsRenderSlots<'sidebar.panellist'>
 
-/** `session.search` wire bound, measured in JavaScript UTF-16 code units. */
-const SEARCH_QUERY_MAX_CODE_UNITS = 500
-
-/** Keep the shared query inside the session.search wire contract. */
-function sanitizeSearchQuery(value: string): string {
-  const withoutNul = value.replaceAll('\0', '')
-  if (withoutNul.length <= SEARCH_QUERY_MAX_CODE_UNITS) return withoutNul
-  let end = SEARCH_QUERY_MAX_CODE_UNITS
-  const last = withoutNul.charCodeAt(end - 1)
-  const next = withoutNul.charCodeAt(end)
-  if (last >= 0xD800 && last <= 0xDBFF && next >= 0xDC00 && next <= 0xDFFF) end--
-  return withoutNul.slice(0, end)
+/** Each panel row subscribes only to its own selection state. */
+function PanelRow({ id, label, wide, usePanelInfo, selectPanel, renderSlot }: PanelRowProps) {
+  const active = usePanelInfo(info => info.activePanelId === id)
+  return (
+    <Tooltip label={label} delayMs={500} disabled={wide}>
+      <button
+        type="button"
+        className={clsx(css.panelRow, active && css.panelActive)}
+        aria-label={label}
+        aria-current={active ? 'page' : undefined}
+        onClick={() => { selectPanel(id) }}
+      >
+        <span className={css.panelGlyph} aria-hidden="true">
+          {renderSlot('sidebar.panellist', { size: wide ? 16 : 18, active }, { only: id })}
+        </span>
+        {wide && (
+          <span className={clsx(css.panelTitle, css.wide)}>
+            {label}
+          </span>
+        )}
+      </button>
+    </Tooltip>
+  )
 }
 
 /**
@@ -74,9 +90,13 @@ export function SidebarRoot({
   width,
   startSession,
   toggleSidebar,
+  selectPanel,
+  usePanels,
+  usePanelInfo,
   t,
   renderSlot,
 }: SidebarRootComponentProps) {
+  const panels = usePanels(snapshot => snapshot)
   // Wide content stays mounted while the collapse animates (fading via
   // .collapsed .wide), unmounts at settle, and remounts right away on expand.
   const [settled, setSettled] = useState(collapsed)
@@ -86,23 +106,6 @@ export function SidebarRoot({
     return () => { window.clearTimeout(timer) }
   }, [collapsed])
   const wide = !collapsed || !settled
-
-  // The one shared search box: raw query goes to both regions, each parsing
-  // its own scope prefix (workspace: / pipeline:) and searching locally.
-  const [searchQuery, setSearchQuery] = useState('')
-  const searchInput = useRef<HTMLInputElement | null>(null)
-  // Rail search = expand + land in the box: the flag arms before the expand
-  // request; once the shell flips wide the input mounts and takes focus.
-  const [searchOnExpand, setSearchOnExpand] = useState(false)
-  useEffect(() => {
-    if (wide && searchOnExpand) {
-      const timer = window.setTimeout(() => {
-        searchInput.current?.focus({ preventScroll: true })
-        setSearchOnExpand(false)
-      }, EXPAND_SLIDE_MS)
-      return () => { window.clearTimeout(timer) }
-    }
-  }, [wide, searchOnExpand])
 
   // Freeze the content at its expanded width while it fades out (collapsed
   // && wide): the sliding column then clips it instead of reflowing it. The
@@ -159,13 +162,6 @@ export function SidebarRoot({
   }, [pointerInside])
 
   const buildVersion = localBuildVersion()
-
-  // The browsing regions share the shell's search box; each owns its scope.
-  const sectionOwner = {
-    wide,
-    expandSidebar: () => { if (collapsed) toggleSidebar() },
-    searchQuery,
-  }
 
   return (
     <div
@@ -243,69 +239,29 @@ export function SidebarRoot({
         </button>
       </Tooltip>
 
-      {/* The shared search row: one box for both browsing regions. Wide renders
-          the input; the rail keeps search as its own 36px control that expands
-          and lands in the box. */}
-      <div className={css.searchRow}>
-        {wide && (
-          <div className={clsx(css.search, css.wide)}>
-            <Tooltip label={t('search.label')} side="bottom" delayMs={500}>
-              <button
-                type="button"
-                className={css.searchButton}
-                aria-label={t('search.label')}
-                onClick={() => { searchInput.current?.focus() }}
-              >
-                <IconSearchOutline16 size={14} />
-              </button>
-            </Tooltip>
-            <input
-              ref={searchInput}
-              className={css.searchInput}
-              type="text"
-              placeholder={t('search.placeholder')}
-              maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(sanitizeSearchQuery(e.target.value)) }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') setSearchQuery('')
-              }}
+      {panels.length > 0 && (
+        <nav className={css.panelList} aria-label={t('panels.label')}>
+          {panels.map(({ id, label }) => (
+            <PanelRow
+              key={id}
+              id={id}
+              label={label}
+              wide={wide}
+              usePanelInfo={usePanelInfo}
+              selectPanel={selectPanel}
+              renderSlot={renderSlot}
             />
-            {searchQuery !== '' && (
-              <button
-                type="button"
-                className={css.clearButton}
-                aria-label={t('search.clear')}
-                onClick={() => { setSearchQuery(''); searchInput.current?.focus() }}
-              >
-                <IconCloseFill14 />
-              </button>
-            )}
-          </div>
-        )}
-        {!wide && (
-          <Tooltip label={t('search.label')}>
-            <button
-              type="button"
-              className={clsx(css.iconButton, css.railSearch)}
-              aria-label={t('search.label')}
-              onClick={() => {
-                setSearchOnExpand(true)
-                toggleSidebar()
-              }}
-            >
-              <IconSearchOutline16 size={18} />
-            </button>
-          </Tooltip>
-        )}
-      </div>
+          ))}
+        </nav>
+      )}
 
-      {/* The browsing regions fill the column between the controls and the
-          foot in both states; their rail icon columns ride the same slot.
-          Order: workspace region first, pipeline zone below it. */}
+      {/* The browsing region fills the column between the controls and the
+          foot in both states; its rail icon column rides the same slot. */}
       <div className={css.regionArea}>
-        {renderSlot('sidebar.workspaces', sectionOwner)}
-        {renderSlot('sidebar.pipelines', sectionOwner)}
+        {renderSlot('sidebar.workspaces', {
+          wide,
+          expandSidebar: () => { if (collapsed) toggleSidebar() },
+        })}
       </div>
 
       {/* Footer actions stack above Settings in both sidebar widths. */}

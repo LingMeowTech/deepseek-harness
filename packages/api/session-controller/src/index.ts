@@ -1,9 +1,11 @@
 /** Session Remote owner: cold reads, explicit Agent commands, and live control state. */
 
+import { hostname } from 'node:os'
 import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { errorChain } from '@deepseek-ai/dsh-llm'
-import { canOpenNativePath, openNativePath } from '@deepseek-ai/dsh-native-command'
+import type {} from '@deepseek-ai/dsh-client-file-upload'
+import { canOpenNativePath, nativeFileManager, openNativePath, revealNativePath } from '@deepseek-ai/dsh-native-command'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence'
 import type { SessionObservation } from '@deepseek-ai/dsh-session-query'
@@ -17,10 +19,11 @@ import { SessionCommandController } from './commands.ts'
 import { SessionControlController } from './control.ts'
 import { SessionHistoryController } from './history.ts'
 import { SessionFileReferences } from './file-references.ts'
-import { ApiSessionList, DEFAULT_COLD_BLANK_PROBE_MAX_BYTES } from './list.ts'
+import { ApiSessionList } from './list.ts'
 import { buildModelCatalog } from './catalog.ts'
 import { installModelSelectionProjection } from './model-selection-projection.ts'
 import { SessionSkillCatalog } from './skill-catalog.ts'
+import { SessionMediaReferences } from './media-references.ts'
 import type {
   ModelCatalog,
   SessionAttachmentRequest,
@@ -44,12 +47,6 @@ import type {
   SessionPromptValue,
   SessionRenameRequest,
   SessionRenameValue,
-  SessionTagsListRequest,
-  SessionTagsListValue,
-  SessionTagsRemoveRequest,
-  SessionTagsRemoveValue,
-  SessionTagsSetRequest,
-  SessionTagsSetValue,
   SessionSearchRequest,
   SessionSearchValue,
   SessionSelectModelRequest,
@@ -57,7 +54,6 @@ import type {
   SessionUpdateQueueRequest,
   SessionUpdateQueueValue,
 } from './types.ts'
-import type { SessionTagRegistry } from '@lingmeow.tech/dsh-session-tags'
 
 export type * from './types.ts'
 export { ApiSessionNotFound } from './agent.ts'
@@ -73,8 +69,6 @@ declare module '@deepseek-ai/cordis' {
 
 /** Session Controller deployment policy. */
 export interface Config {
-  /** Maximum cold Session artifact size eligible for one full projection observation. */
-  readonly coldBlankProbeMaxBytes?: number
   /** Override platform desktop-opener detection. */
   readonly nativeOpen?: boolean
 }
@@ -83,6 +77,8 @@ export interface Config {
 export interface SessionControllerInternals {
   /** Native default-application handoff. */
   readonly openPath?: (path: string, signal: AbortSignal) => Promise<void>
+  /** Native file-manager handoff. */
+  readonly revealPath?: (path: string, signal: AbortSignal) => Promise<void>
   /** Native handoff availability probe. */
   readonly canOpenPath?: () => boolean
 }
@@ -93,17 +89,16 @@ export class SessionController extends TypertRemoteService {
     'agentDefaultModel',
     'agents',
     'attachments',
+    'fileUploads',
     'llm',
     'sessions',
     'sessionProjections',
-    'sessionTags',
     'sessionQuery',
     'typert',
     'workspaceRegistry',
   ]
 
   static Config: z<Config> = z.object({
-    coldBlankProbeMaxBytes: z.natural().default(DEFAULT_COLD_BLANK_PROBE_MAX_BYTES),
     nativeOpen: z.boolean(),
   })
 
@@ -112,20 +107,26 @@ export class SessionController extends TypertRemoteService {
   private readonly controlState: SessionControlController
   private readonly history: SessionHistoryController
   private readonly listState: ApiSessionList
-  private readonly sessionTags: SessionTagRegistry
   private readonly openPath: (path: string, signal: AbortSignal) => Promise<void>
+  private readonly revealPath: (path: string, signal: AbortSignal) => Promise<void>
   private readonly canOpenPath: () => boolean
   private readonly promotions = new Set<Promise<void>>()
 
   /**
    * @param ctx - Host context containing the Session capability assembly.
-   * @param config - cold-list observation policy.
+   * @param config - native-opener deployment policy.
+   * @param internals - host integrations replaceable by direct unit tests.
    */
   constructor(ctx: Context, config: Config, internals: SessionControllerInternals = {}) {
     super(ctx, 'sessionController', { namespace: 'session' })
     installModelSelectionProjection(ctx)
     this.agents = new ApiSessionAgentController(ctx)
     this.commands = new SessionCommandController(ctx, this.agents, process.cwd())
+    ctx.effect(() => ctx.fileUploads.registerAgentResolver(async (sessionId) => {
+      const result = await this.agents.resolveAgent(sessionId)
+      if ('error' in result) throw result.error
+      return result.agent
+    }), 'session-controller: file-upload Agent resolver')
     this.controlState = new SessionControlController(ctx)
     // Registered before history so reverse-order teardown closes every
     // follower before waiting for already-admitted promotions.
@@ -133,15 +134,13 @@ export class SessionController extends TypertRemoteService {
       await Promise.allSettled([...this.promotions])
     }, 'session-controller.promotions')
     this.history = new SessionHistoryController(ctx, (observation) => { this.promote(observation) })
-    this.listState = new ApiSessionList(
-      ctx,
-      config.coldBlankProbeMaxBytes ?? DEFAULT_COLD_BLANK_PROBE_MAX_BYTES,
-    )
-    this.sessionTags = ctx.sessionTags
+    this.listState = new ApiSessionList(ctx)
     this.openPath = internals.openPath ?? openNativePath
+    this.revealPath = internals.revealPath ?? revealNativePath
     this.canOpenPath = internals.canOpenPath
       ?? (() => config.nativeOpen ?? (internals.openPath !== undefined || canOpenNativePath()))
     ctx.plugin(SessionFileReferences)
+    ctx.plugin(SessionMediaReferences)
     ctx.plugin(SessionSkillCatalog)
 
     ctx.on('session/created', (session) => {
@@ -208,6 +207,7 @@ export class SessionController extends TypertRemoteService {
       return Promise.resolve({
         meta: attached.header,
         inheritedEventCount: attached.inheritedEventCount,
+        // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
         events: attached.snapshotEvents(),
       })
     }
@@ -223,36 +223,6 @@ export class SessionController extends TypertRemoteService {
   @Remote('list')
   async list(_request: SessionListRequest, signal: AbortSignal): Promise<SessionListValue> {
     return { items: await this.listState.list(signal) }
-  }
-
-  /**
-   * Read one session's durable tag list (pipeline-zone session filtering).
-   * @param request - session whose tags are read.
-   * @returns the session's durable tag list.
-   */
-  @Remote('tagsList')
-  async tagsList(request: SessionTagsListRequest): Promise<SessionTagsListValue> {
-    return { tags: await this.sessionTags.list(request.sessionId) }
-  }
-
-  /**
-   * Replace one session's complete tag list; an empty list clears the row.
-   * @param request - session and the replacement tag list.
-   * @returns the session's durable tag list after the write.
-   */
-  @Remote('tagsSet')
-  async tagsSet(request: SessionTagsSetRequest): Promise<SessionTagsSetValue> {
-    return { tags: await this.sessionTags.set(request.sessionId, request.tags) }
-  }
-
-  /**
-   * Remove the named tags from one session's durable list.
-   * @param request - session and the tags to drop.
-   * @returns the session's durable tag list after the removal.
-   */
-  @Remote('tagsRemove')
-  async tagsRemove(request: SessionTagsRemoveRequest): Promise<SessionTagsRemoveValue> {
-    return { tags: await this.sessionTags.remove(request.sessionId, request.tags) }
   }
 
   /**
@@ -305,6 +275,15 @@ export class SessionController extends TypertRemoteService {
   }
 
   /**
+   * Describe the serving desktop for authenticated file-action routes.
+   * @returns Host name, configured availability, and platform-specific file-manager behavior.
+   */
+  workspaceDesktop(): { name: string; available: boolean; fileManager: 'finder' | 'explorer' | 'directory' | null } {
+    const fileManager = nativeFileManager()
+    return { name: hostname(), available: fileManager !== null && this.canOpenPath(), fileManager }
+  }
+
+  /**
    * Open one path prepared by a Session-aware caller on the Host desktop.
    * @param request - path after best-effort Session workspace resolution.
    * @param signal - caller lifetime; abort terminates the native command.
@@ -325,7 +304,8 @@ export class SessionController extends TypertRemoteService {
     }
     signal.throwIfAborted()
     try {
-      await this.openPath(request.path, signal)
+      if (request.action === 'reveal') await this.revealPath(request.path, signal)
+      else await this.openPath(request.path, signal)
       return { opened: true }
     } catch (error: unknown) {
       if (signal.aborted) throw new RemoteError('gateway/cancelled', 'path open was aborted', {})
@@ -414,7 +394,8 @@ export class SessionController extends TypertRemoteService {
    * Follow one Session log from its opening or resume cursor.
    * @param request - durable address and last committed sequence already held by the caller.
    * @param signal - cancellation owned by the Remote stream carrier.
-   * @returns a complete opening snapshot followed by gap-free event frames.
+   * @returns a complete opening snapshot followed by gap-free durable event
+   *   frames and optional cursorless assistant-stream frames.
    */
   @Remote({ mode: 'stream' })
   follow(request: SessionFollowRequest, signal: AbortSignal): AsyncIterable<SessionFollowFrame> {
