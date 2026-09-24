@@ -8,8 +8,9 @@ import {
   Tag,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { StateDotState, TagTone } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { PluginInventoryLocaleKey } from './locales.ts'
+import type { PluginInventoryItemsState } from './inventory-items.ts'
 import css from './PluginInventorySettingsTab.module.css'
 
 type PluginInventoryEntry = PluginInventorySnapshot['entries'][number]
@@ -25,6 +26,13 @@ export interface PluginInventorySettingsTabInjected {
    * agent-preset dictionaries, user-authored ones keep their own metadata.
    */
   presetName: (preset: AgentPresetGroup) => string
+  hooks: {
+    /** Extra-row keys bound by the renderer as usePluginInventoryItems. */
+    pluginInventoryItems: {
+      getSnapshot(): PluginInventoryItemsState
+      subscribe(listener: () => void): () => void
+    }
+  }
 }
 type PluginFiberPhase = PluginInventoryEntry['fiberPhase']
 
@@ -32,6 +40,7 @@ type PluginFiberPhase = PluginInventoryEntry['fiberPhase']
 export type PluginInventorySettingsTabProps =
   PropsRuntime<'settings.plugins.tab'>
   & PropsLocale<'settings.pluginInventory'>
+  & PropsRenderSlots<'settings.plugin.inventory.item'>
   & InjectFace<PluginInventorySettingsTabInjected>
 
 type Translate = PluginInventorySettingsTabProps['t']
@@ -197,7 +206,9 @@ function StateTag({ kind, label }: { readonly kind: EnablementKind; readonly lab
 }
 
 /** Render the read-only plugin inventory: agent presets first, then the global plane. */
-export function PluginInventorySettingsTab({ list, presetName, t }: PluginInventorySettingsTabProps): ReactNode {
+export function PluginInventorySettingsTab(
+  { list, presetName, renderSlot, usePluginInventoryItems, t }: PluginInventorySettingsTabProps,
+): ReactNode {
   const sectionId = useId()
   const [request, setRequest] = useState(0)
   const [query, setQuery] = useState('')
@@ -247,8 +258,11 @@ export function PluginInventorySettingsTab({ list, presetName, t }: PluginInvent
 
   const entryMatch = (entry: PluginInventoryEntry): boolean => matches(entry.moduleName, entry.entryId, normalizedQuery)
   const rowMatch = (row: AgentPresetRow): boolean => matches(row.moduleName, row.entryId, normalizedQuery)
-  const filteredFailed = failedEntries.filter(entryMatch)
-  const filteredRegular = regularEntries.filter(entryMatch)
+  const itemKeys = usePluginInventoryItems === undefined ? [] : usePluginInventoryItems(snapshot => snapshot.keys)
+  // A custom row claims its loader entry; the official read-only row yields.
+  const claimed = new Set(itemKeys)
+  const filteredFailed = failedEntries.filter(entry => !claimed.has(entry.moduleName) && !claimed.has(entry.entryId)).filter(entryMatch)
+  const filteredRegular = regularEntries.filter(entry => !claimed.has(entry.moduleName) && !claimed.has(entry.entryId)).filter(entryMatch)
   const globalCount = filteredFailed.length + filteredRegular.length
   const selectedRows = selected === undefined ? [] : selected.rows.filter(rowMatch)
   const otherPresetMatches = searching
@@ -503,6 +517,7 @@ export function PluginInventorySettingsTab({ list, presetName, t }: PluginInvent
                     entry,
                     entry.enabled ? undefined : enabledIn.get(entry.moduleName),
                   ))}
+                  {itemKeys.map(key => renderSlot('settings.plugin.inventory.item', {}, { entryKey: key }))}
                 </ul>
               ) : null}
             </section>

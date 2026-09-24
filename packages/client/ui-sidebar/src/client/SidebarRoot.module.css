@@ -65,6 +65,7 @@
    render stays static. */
 .railIn .iconButton,
 .railIn .newSession,
+.railIn .searchRow,
 .railIn .panelList,
 .railIn .regionArea {
   animation: rail-in 150ms var(--ds-ease-in-out) backwards;
@@ -506,6 +507,7 @@
   .fading > *,
   .railIn .iconButton,
   .railIn .newSession,
+  .railIn .searchRow,
   .railIn .panelList,
   .railIn .footArea,
   .railIn .regionArea {

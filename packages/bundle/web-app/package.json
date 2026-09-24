@@ -39,6 +39,7 @@
     }
   },
   "dependencies": {
+    "@lingmeow.tech/dsh-session-tags": "workspace:^",
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@deepseek-ai/dsh-api-remotes": "workspace:^",
     "@deepseek-ai/dsh-api-session-controller": "workspace:^",

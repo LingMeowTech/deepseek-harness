@@ -19,7 +19,10 @@
 import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  FishLogo, IconNewChatOutline16, IconPanelLeftOutline16, Tooltip,
+  FishLogo,
+  IconCloseFill14, IconNewChatOutline16, IconPanelLeftOutline16,
+  IconSearchOutline16,
+  Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
@@ -46,6 +49,23 @@ function localBuildVersion(): string | undefined {
   return version
     + (commit === undefined ? '' : `-${commit}`)
     + (process.env.DSH_CLIENT_GIT_DIRTY === 'true' ? '-dirty' : '')
+}
+
+/** Column slide length; rail-search focus waits it out (matches the browser's). */
+const EXPAND_SLIDE_MS = 300
+
+/** `session.search` wire bound, measured in JavaScript UTF-16 code units. */
+const SEARCH_QUERY_MAX_CODE_UNITS = 500
+
+/** Keep the shared query inside the session.search wire contract. */
+function sanitizeSearchQuery(value: string): string {
+  const withoutNul = value.replaceAll('\0', '')
+  if (withoutNul.length <= SEARCH_QUERY_MAX_CODE_UNITS) return withoutNul
+  let end = SEARCH_QUERY_MAX_CODE_UNITS
+  const last = withoutNul.charCodeAt(end - 1)
+  const next = withoutNul.charCodeAt(end)
+  if (last >= 0xD800 && last <= 0xDBFF && next >= 0xDC00 && next <= 0xDFFF) end--
+  return withoutNul.slice(0, end)
 }
 
 type PanelRowProps =
@@ -278,6 +298,63 @@ export function SidebarRoot({
           ))}
         </nav>
       )}
+
+      {/* The shared search row: one box for both browsing regions. Wide renders
+          the input; the rail keeps search as its own 36px control that expands
+          and lands in the box. */}
+      <div className={css.searchRow}>
+        {wide && (
+          <div className={clsx(css.search, css.wide)}>
+            <Tooltip label={t('search.label')} side="bottom" delayMs={500}>
+              <button
+                type="button"
+                className={css.searchButton}
+                aria-label={t('search.label')}
+                onClick={() => { searchInput.current?.focus() }}
+              >
+                <IconSearchOutline16 size={14} />
+              </button>
+            </Tooltip>
+            <input
+              ref={searchInput}
+              className={css.searchInput}
+              type="text"
+              placeholder={t('search.placeholder')}
+              maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(sanitizeSearchQuery(e.target.value)) }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearchQuery('')
+              }}
+            />
+            {searchQuery !== '' && (
+              <button
+                type="button"
+                className={css.clearButton}
+                aria-label={t('search.clear')}
+                onClick={() => { setSearchQuery(''); searchInput.current?.focus() }}
+              >
+                <IconCloseFill14 />
+              </button>
+            )}
+          </div>
+        )}
+        {!wide && (
+          <Tooltip label={t('search.label')}>
+            <button
+              type="button"
+              className={clsx(css.iconButton, css.railSearch)}
+              aria-label={t('search.label')}
+              onClick={() => {
+                setSearchOnExpand(true)
+                toggleSidebar()
+              }}
+            >
+              <IconSearchOutline16 size={18} />
+            </button>
+          </Tooltip>
+        )}
+      </div>
 
       {/* The browsing region fills the column between the controls and the
           foot in both states; its rail icon column rides the same slot. */}

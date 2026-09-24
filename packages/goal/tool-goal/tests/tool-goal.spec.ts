@@ -14,6 +14,7 @@ import SessionStore, {
   SessionId,
   SessionLogOffset,
 } from '@deepseek-ai/dsh-session'
+import { isStructuredOutputSession } from '../src/wrapup.ts'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
@@ -90,7 +91,7 @@ function closeTurn(stub: StubAgent, turn: number): void {
   stub.session.append('turn/end', { turn, reason: { kind: 'completed' } })
 }
 
-async function harness(config: toolGoal.Config = {}) {
+async function harness(config: toolGoal.Config = {}, rootSession?: Session) {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
   await ctx.plugin(SessionProjectionRegistry)
@@ -100,7 +101,7 @@ async function harness(config: toolGoal.Config = {}) {
   ctx.sessionProjections.register(turnBoundaryProjectionDefinition)
   await ctx.plugin(GoalService)
   const fiber = await ctx.plugin(toolGoal, config)
-  const root = stubAgent(`goal-tool-root-${Math.random()}`, undefined, ctx)
+  const root = stubAgent(`goal-tool-root-${Math.random()}`, rootSession, ctx)
   ctx.agents.register(root.agent)
   return { ctx, fiber, root }
 }
